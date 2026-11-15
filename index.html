@@ -175,9 +175,16 @@ button.qhelp:hover,button.qhelp.on{background:var(--accent);color:#fff}
 .termpick{display:inline-flex;align-items:center;gap:6px}
 .exam-pick{margin-bottom:14px}
 .exam-pick select{min-width:320px;font-size:16px;font-weight:500}
-.tp-yy{display:inline-flex;align-items:center;gap:2px;font-weight:500}
 .termpick select{padding-left:8px;padding-right:4px}
-.tp-d1,.tp-d2{width:58px}
+input.tp-y{width:96px;font:inherit;font-size:16px;padding:8px 6px 8px 12px;min-height:44px;border:2px solid var(--line);border-radius:9px;background:#fff}
+input.tp-y:focus{outline:none;border-color:var(--accent)}
+input.tp-y.bad{border-color:var(--err);background:var(--err-weak)}
+/* 表は文字の幅に合わせる */
+.tablewrap{display:inline-block;max-width:100%;vertical-align:top}
+.tablewrap table{width:auto}
+.tablewrap th,.tablewrap td{padding:8px 16px}
+.tablewrap td.empty{min-width:420px}
+#qTable td:nth-child(1),#qTable th:nth-child(1),#qTable td:nth-child(3),#qTable th:nth-child(3){text-align:center}
 .nowrap{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 /* 上のバー：うすいグレー */
 header{background:#eceff3;border-bottom:1px solid #d3d8e0;position:sticky;top:0;z-index:20}
@@ -228,7 +235,7 @@ header h1{margin-right:auto !important}
     <h2 class="with-help">学生情報の登録 <button type="button" class="qhelp" data-help="students" aria-label="説明を見る">?</button></h2>
     <div class="steps">
       <div class="step"><b>① 期を選ぶ</b>
-        <div class="row"><span class="termpick" data-for="stuTerm"><span class="tp-yy">20<select class="tp-d1" aria-label="年の十の位"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select><select class="tp-d2" aria-label="年の一の位"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></span> 年 <select class="tp-m"><option value="01">1月期</option><option value="04">4月期</option><option value="07">7月期</option><option value="10">10月期</option></select></span><input type="hidden" id="stuTerm"></div></div>
+        <div class="row"><span class="termpick" data-for="stuTerm"><input type="number" class="tp-y" min="2000" max="2099" step="1" inputmode="numeric" aria-label="年"> 年 <select class="tp-m"><option value="01">1月期</option><option value="04">4月期</option><option value="07">7月期</option><option value="10">10月期</option></select></span><input type="hidden" id="stuTerm"></div></div>
       <div class="step"><b class="with-help">② 入力用エクセルをダウンロード <button type="button" class="qhelp" data-help="stuTpl" aria-label="説明を見る">?</button></b>
         <button class="btn" id="stuTpl">⬇ 学生情報のエクセル</button></div>
       <div class="step"><b>③ 入力したエクセルを読み込む</b>
@@ -260,7 +267,7 @@ header h1{margin-right:auto !important}
     <div class="steps">
       <div class="step"><b>① 試験名</b>
         <input type="text" id="examName" placeholder="例：2610期 期末試験" style="width:100%">
-        <div class="row" style="margin-top:8px"><span class="termpick" data-for="examTerm"><span class="tp-yy">20<select class="tp-d1" aria-label="年の十の位"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select><select class="tp-d2" aria-label="年の一の位"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option></select></span> 年 <select class="tp-m"><option value="01">1月期</option><option value="04">4月期</option><option value="07">7月期</option><option value="10">10月期</option></select></span><input type="hidden" id="examTerm"> <span class="nowrap">の学生情報を使用する <button type="button" class="qhelp" data-help="examTerm" aria-label="説明を見る">?</button></span></div></div>
+        <div class="row" style="margin-top:8px"><span class="termpick" data-for="examTerm"><input type="number" class="tp-y" min="2000" max="2099" step="1" inputmode="numeric" aria-label="年"> 年 <select class="tp-m"><option value="01">1月期</option><option value="04">4月期</option><option value="07">7月期</option><option value="10">10月期</option></select></span><input type="hidden" id="examTerm"> <span class="nowrap">の学生情報を使用する <button type="button" class="qhelp" data-help="examTerm" aria-label="説明を見る">?</button></span></div></div>
       <div class="step"><b>② 入力用エクセルをダウンロード</b>
         <button class="btn" id="qTpl">⬇ 設問のエクセル</button>
         <div class="small muted" style="margin-top:6px">選んでいる試験の設問が入った状態で出力されます。</div></div>
@@ -511,16 +518,24 @@ function findStudent(id){
 /* ----- 期の入力（年と期を選ぶ） ----- */
 function initTermPickers(){
   document.querySelectorAll('.termpick').forEach(tp => {
-    const d1 = tp.querySelector('.tp-d1'), d2 = tp.querySelector('.tp-d2'), ms = tp.querySelector('.tp-m'), hid = $(tp.dataset.for);
-    const sync = () => { hid.value = d1.value + d2.value + ms.value; };
-    d1.onchange = d2.onchange = ms.onchange = () => { sync(); if(tp.dataset.for === 'stuTerm') renderStudents(); };
+    const y = tp.querySelector('.tp-y'), ms = tp.querySelector('.tp-m'), hid = $(tp.dataset.for);
+    const apply = () => {
+      const v = parseInt(z2h(y.value), 10);
+      if(!(v >= 2000 && v <= 2099)){ y.classList.add('bad'); return; }
+      y.classList.remove('bad');
+      const code = String(v).slice(-2) + ms.value;
+      if(hid.value !== code){ hid.value = code; if(tp.dataset.for === 'stuTerm') renderStudents(); }
+    };
+    y.oninput = () => { if(String(y.value).length >= 4) apply(); };
+    y.onchange = y.onblur = apply;
+    ms.onchange = apply;
   });
 }
 function setTerm(id, code){
   code = normTerm(code) || termNow();
   const tp = document.querySelector(`.termpick[data-for="${id}"]`);
-  tp.querySelector('.tp-d1').value = code[0];
-  tp.querySelector('.tp-d2').value = code[1];
+  const y = tp.querySelector('.tp-y');
+  y.value = '20' + code.slice(0, 2); y.classList.remove('bad');
   tp.querySelector('.tp-m').value = code.slice(2);
   $(id).value = code;
 }
