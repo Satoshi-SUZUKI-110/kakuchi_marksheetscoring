@@ -214,6 +214,13 @@ header h1{margin-right:auto !important}
 .g-item{align-items:center;justify-content:center;text-align:center;padding:16px 10px;min-height:64px}
 .g-item .g-t{font-size:19px;white-space:nowrap}
 @media (max-width:1000px){ .g-item .g-t{font-size:16px} }
+/* ①〜③のブロックにうすい色 */
+.step{background:#f2f5fa;border:2px solid #dde3ec}
+.step input[type=text],.step select,.step input.tp-y,.step button.btn{background:#fff}
+.step label.drop{background:#fff}
+.step label.drop:hover,.step label.drop.over{background:var(--accent-weak)}
+/* 学生一覧を中央に */
+.tablewrap.center{display:block;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto}
 </style>
 </head>
 <body>
@@ -269,7 +276,7 @@ header h1{margin-right:auto !important}
       <div class="row">クラス：<select id="stuClassFilter"></select></div>
     </div>
     <div class="msg warn" id="stuDupBanner" hidden style="margin-top:10px"></div>
-    <div class="tablewrap" style="margin-top:10px"><table id="stuTable"></table></div>
+    <div class="tablewrap center" style="margin-top:14px"><table id="stuTable"></table></div>
     <details class="danger-zone"><summary>削除する（注意）</summary>
       <div class="row"><button class="btn danger" id="stuClear">学生情報を全部削除</button><span class="small muted">ボタンを2回押すと削除されます。元にもどせません。</span></div></details>
   </div>
