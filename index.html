@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>格致教育日本語学校 試験結果集計システム</title>
+<title>試験結果集計システム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -21,8 +21,13 @@ header h1{font-size:18px;margin:0;font-weight:700}
 #storeStatus[data-type=ok]{color:var(--ok)} #storeStatus[data-type=err]{color:var(--err)}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .login[hidden]{display:none}
-.login-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 30px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
-.login-box h1{font-size:20px;margin:0}
+.login-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:34px 36px 30px;width:100%;max-width:540px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 30px rgba(20,40,80,.06)}
+.login-box h1{margin:0;text-align:center;white-space:nowrap;font-weight:700;letter-spacing:.04em;
+  font-size:min(22px, calc((100vw - 120px) / 20))}
+.login-box h1::after{content:"";display:block;width:48px;height:3px;border-radius:2px;background:var(--accent);margin:14px auto 6px}
+.login-box > p, .login-box > label{text-align:center;justify-content:center}
+.login-box > label{display:flex;align-items:center;gap:6px}
+.login-box #loginMsg{text-align:center}
 .login-box input[type=password]{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:7px}
 .login-box button{justify-content:center;padding:9px}
 nav{display:flex;gap:4px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
@@ -91,7 +96,7 @@ tr.dup-row td{background:#fff6cc}
 <div id="login" class="login">
   <form id="loginForm" class="login-box">
     <h1>格致教育日本語学校 試験結果集計システム</h1>
-    <p class="muted small">パスワードを入れてください。</p>
+    <p class="muted small" style="margin:0">パスワードを入れてください。</p>
     <input type="password" id="loginPw" placeholder="パスワード" autocomplete="current-password">
     <label class="small"><input type="checkbox" id="loginRemember"> このパソコンでログインしたままにする</label>
     <button class="btn primary" id="loginBtn" type="submit">ログイン</button>
