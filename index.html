@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
 :root{
   --bg:#f6f7f9; --panel:#fff; --ink:#1d2430; --sub:#5b6575; --line:#e2e6ec;
@@ -246,6 +249,74 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
 .ed-row select{min-height:44px}
 .ed-row .ed-x{border:none;background:none;color:var(--err);font-size:14px;cursor:pointer;text-decoration:underline}
 .ed-foot{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+/* カード5つ */
+.guide{grid-template-columns:repeat(5,1fr)}
+.g-item .g-t{font-size:17px}
+@media (max-width:1200px){ .g-item .g-t{font-size:15px} }
+/* ③ マークシート作成 */
+label.radio{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:15px;margin-right:12px}
+label.radio input{width:18px;height:18px}
+input.num-in{width:96px;font:inherit;font-size:16px;padding:8px 10px;border:2px solid var(--line);border-radius:9px;min-height:44px}
+.sh-list{margin-top:14px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
+.sh-stu{display:grid;grid-template-columns:24px 76px 96px 1fr 1fr;gap:6px;align-items:center;padding:7px 12px;border-bottom:1px solid #eef1f5;cursor:pointer;font-size:14px}
+.sh-stu:nth-child(even){background:#f6f8fb}
+.sh-stu:hover{background:#e6eefc}
+.sh-stu input{width:18px;height:18px}
+.sh-stu .c{color:var(--sub)}
+.sh-preview{margin-top:14px;border:1px solid var(--line);border-radius:8px;background:#fff;max-width:720px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.sh-preview svg{width:100%;height:auto;display:block}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  body.printing > *:not(#printArea){display:none !important}
+  body.printing #printArea{display:block}
+  body.printing{background:#fff;margin:0}
+  #printArea svg.sheet{display:block;width:210mm;height:297mm;page-break-after:always;break-after:page}
+}
+/* ④ 読み取り */
+.omr-prog{display:flex;align-items:center;gap:12px;margin-top:14px}
+.omr-prog[hidden]{display:none}
+#omrSheets td.small{white-space:normal;min-width:240px;max-width:420px;line-height:1.5}
+#omrResult[hidden],#shPreviewWrap[hidden]{display:none}
+.omr-prog .bar{flex:1;max-width:420px;height:12px;background:#e5e9f0;border-radius:6px;overflow:hidden}
+.omr-prog .bar div{height:100%;background:var(--accent);width:0;transition:width .2s}
+.omr-h3{font-size:17px;margin:20px 0 8px}
+#omrReview{margin-top:12px;border:2px solid #f0d9a8;background:#fffaf0;border-radius:12px;padding:14px 16px}
+.rv-done{font-size:16px;color:var(--ok);font-weight:700}
+.rv-nav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.rv-card{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.rv-img{display:flex;flex-direction:column}
+.rv-crop{position:relative;border:1px solid var(--line)}
+.rv-crop img{display:block}
+.ring{position:absolute;border:3px solid transparent;border-radius:50%;background:transparent;cursor:pointer;padding:0}
+.ring:hover{border-color:rgba(36,87,197,.5)}
+.ring.cand{border-color:#f0a400;box-shadow:0 0 0 2px rgba(240,164,0,.25)}
+.ring.pick{border-color:var(--accent);box-shadow:0 0 0 3px rgba(36,87,197,.25)}
+.rv-side{flex:1;min-width:260px}
+.rv-who{font-weight:700;font-size:16px}
+.rv-why{margin:6px 0 10px;color:#8a5a00;font-weight:700}
+.rv-ans{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.rv-ans .btn{min-width:56px;font-size:18px;justify-content:center}
+.ok-btn{background:var(--ok) !important;border-color:var(--ok) !important;color:#fff !important}
+.rv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;max-height:120px;overflow:auto}
+.rv-chip{border:2px solid #f0c060;background:#fff;border-radius:14px;padding:2px 10px;font:inherit;font-size:13px;cursor:pointer}
+.rv-chip.done{border-color:#b9dfc8;background:#eef8f2;color:var(--ok)}
+.rv-chip.cur{outline:3px solid rgba(36,87,197,.4)}
+#omrSheets td.mono{font-family:ui-monospace,Consolas,monospace;letter-spacing:.05em}
+#omrSheets tr.unused td{color:#9aa3b0}
+input.bad{border-color:var(--err) !important;background:var(--err-weak)}
+.sheet-dlg{max-width:900px;width:96vw;max-height:94vh;overflow:auto}
+.sheet-view{position:relative;width:100%;max-width:840px;margin:0 auto}
+.sheet-view img{width:100%;display:block}
+.sheet-view svg{position:absolute;inset:0;width:100%;height:100%}
+.sheet-view .hit{fill:transparent;stroke:transparent;stroke-width:0.6;cursor:pointer}
+.sheet-view .hit:hover{stroke:rgba(36,87,197,.5)}
+.sheet-view .hit.g{stroke:#2e9d5b}
+.sheet-view .hit.y{stroke:#f0a400}
+.sheet-view .hit.e{stroke:#2457c5;stroke-width:0.8}
+.lg{display:inline-block;margin-left:12px;padding-left:16px;position:relative}
+.lg::before{content:"";position:absolute;left:0;top:50%;width:11px;height:7px;margin-top:-4px;border-radius:50%;border:2px solid}
+.lg.g::before{border-color:#2e9d5b}.lg.y::before{border-color:#f0a400}.lg.e::before{border-color:#2457c5}
 </style>
 </head>
 <body>
@@ -272,8 +343,9 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
 <nav id="tabs">
   <button data-tab="students" class="active"><span class="num">1</span>学生を登録</button>
   <button data-tab="exams"><span class="num">2</span>試験を登録</button>
-  <button data-tab="marks"><span class="num">3</span>マークを読み込む</button>
-  <button data-tab="results"><span class="num">4</span>結果を見る</button>
+  <button data-tab="sheets"><span class="num">3</span>マークシートを作成</button>
+  <button data-tab="marks"><span class="num">4</span>マークを読み込む</button>
+  <button data-tab="results"><span class="num">5</span>結果を見る</button>
 </nav>
 <div class="guide" id="guide"></div>
 <main>
@@ -344,20 +416,71 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
 </section>
 
 <!-- 3 マーク -->
+<section id="tab-sheets" hidden>
+  <div class="panel">
+    <h2 class="with-help">マークシートの作成 <button type="button" class="qhelp" data-help="sheets" aria-label="説明を見る">?</button></h2>
+    <div class="steps">
+      <div class="step"><b>① 試験と問題数</b>
+        <div class="row">試験：<select id="shExam" style="min-width:240px"></select></div>
+        <div class="row" style="margin-top:10px">問題数：
+          <label class="radio"><input type="radio" name="shN" id="shN50" checked> 50問</label>
+          <label class="radio"><input type="radio" name="shN" id="shN100"> 100問</label></div>
+        <div class="small muted" id="shQInfo" style="margin-top:6px"></div></div>
+      <div class="step"><b>② 名前入りのシート（個人用）</b>
+        <label class="radio"><input type="checkbox" id="shPersonal" checked> クラス・名前・QRコードを印刷する</label>
+        <div class="row" style="margin-top:8px">クラス：<select id="shClass"></select></div>
+        <div class="row" style="margin-top:8px"><button class="btn" id="shAll">全員えらぶ</button><button class="btn" id="shNone">全員はずす</button>
+          <span class="small muted" id="shStuCount"></span></div></div>
+      <div class="step"><b>③ 名前なしのシート（予備）</b>
+        <label class="radio"><input type="checkbox" id="shSpare"> クラス・名前を入れないシートも作る</label>
+        <div class="row" style="margin-top:8px"><input type="number" id="shSpareN" value="10" min="0" max="500" class="num-in"> 枚</div>
+        <div class="small muted" style="margin-top:6px">学生が名前を書いて、学籍番号の数字7ケタをぬるシートです。</div></div>
+    </div>
+    <div class="sh-list" id="shStuList"></div>
+    <div class="row" style="margin-top:14px;gap:12px">
+      <button class="btn" id="shPreviewBtn">👁 見本を見る</button>
+      <button class="btn primary" id="shPrintBtn">🖨 印刷する（PDFに保存もできます）</button>
+      <span class="small muted">印刷の設定で、倍率を「100%（実際のサイズ）」にしてください。</span></div>
+    <div class="msg" id="shMsg"></div>
+    <div id="shPreviewWrap" hidden><div class="sh-preview" id="shPreview"></div></div>
+  </div>
+</section>
+
 <section id="tab-marks" hidden>
   <div class="panel">
-    <h2>マークデータの読み込み</h2>
+    <h2>マークの読み込み</h2>
+    <div class="row" style="gap:16px">試験：<select id="markExam" style="min-width:260px"></select>
+      読み込み方：<select id="markMode"><option value="merge">追加・更新</option><option value="replace">全部入れ替え</option></select></div>
+  </div>
+  <div class="panel">
+    <h2 class="with-help">スキャンしたPDFから読み込む <button type="button" class="qhelp" data-help="omr" aria-label="説明を見る">?</button></h2>
+    <div class="steps">
+      <div class="step"><b>① スキャンしたPDFを入れる</b>
+        <div style="margin-top:6px"><label class="drop"><span class="ico">📄</span>PDFをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ（何枚でもOK）</span><input type="file" id="omrFile" accept=".pdf,image/*" multiple></label></div></div>
+      <div class="step"><b>読み取りの設定</b>
+        <div class="row">QRコードがないシートの問題数：<select id="omrN"><option value="50">50問</option><option value="100">100問</option></select></div>
+        <label class="radio" style="margin-top:10px"><input type="checkbox" id="omrOther"> ちがう試験のシートも、この試験として読む</label>
+        <div class="small muted" style="margin-top:6px">ふつうはチェックしません（試作のシートをためすときなど）。</div></div>
+    </div>
+    <div class="omr-prog" id="omrProg" hidden><div class="bar"><div id="omrBar"></div></div><span id="omrProgText"></span></div>
+    <div class="msg" id="omrMsg"></div>
+    <div id="omrResult" hidden>
+      <div class="stats" id="omrStats"></div>
+      <div id="omrReview"></div>
+      <h3 class="omr-h3">シートの一覧</h3>
+      <div class="tablewrap"><table id="omrSheets"></table></div>
+      <div class="row" style="margin-top:14px;gap:12px"><button class="btn primary" id="omrSave">💾 確定して保存</button><button class="btn" id="omrCancel">やめる</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>エクセルから読み込む <span class="h2-note">らく点マーク君などで作ったエクセル</span></h2>
     <p class="lead">A列に学籍番号、B列から設問の順番にマーク番号を入れたデータを読み込みます。1行目が見出し（学籍番号）でも、見出しがなくても読めます。</p>
-    <div class="row" style="margin-bottom:12px">試験：<select id="markExam"></select></div>
     <div class="steps">
       <div class="step"><b>① 入力用エクセルをダウンロード</b>
         <div class="row"><select id="markTplClass"></select><button class="btn" id="mTpl">⬇ マークのエクセル</button></div>
         <div class="small muted" style="margin-top:6px">学籍番号と設問番号が入った状態で出力されます。</div></div>
       <div class="step"><b>② 入力したエクセルを読み込む</b>
-        <div class="row">
-          <select id="markMode"><option value="merge">追加・更新</option><option value="replace">全部入れ替え</option></select>
-        </div>
-        <div style="margin-top:10px"><label class="drop"><span class="ico">📄</span>エクセルをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ</span><input type="file" id="mFile" accept=".xlsx,.xls,.csv"></label></div></div>
+        <div style="margin-top:6px"><label class="drop"><span class="ico">📄</span>エクセルをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ</span><input type="file" id="mFile" accept=".xlsx,.xls,.csv"></label></div></div>
     </div>
     <div class="msg" id="mMsg"></div>
   </div>
@@ -402,6 +525,7 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
 </section>
 </main>
 </div>
+<div id="printArea"></div>
 <div class="pop" id="qPop" hidden role="dialog"><button type="button" class="pop-x" aria-label="閉じる">×</button><div class="pop-t"></div><div class="pop-b"></div></div>
 <div class="overlay" id="editDialog" hidden>
   <div class="dialog edit" role="dialog" aria-labelledby="editTitle">
@@ -423,6 +547,13 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
     </div>
   </div>
 </div>
+<div class="overlay" id="sheetDialog" hidden>
+  <div class="dialog sheet-dlg" role="dialog">
+    <div class="row" style="justify-content:space-between"><h3 id="sheetTitle" style="color:var(--ink);margin:0"></h3><button class="btn" id="sheetClose">閉じる</button></div>
+    <div class="small muted" style="margin:6px 0 10px">マークをクリックすると、その答えに変わります（もう一度クリックで空欄）。<span class="lg g">緑＝自動で読み取り</span><span class="lg y">黄＝確認が必要</span><span class="lg e">青＝先生が直した</span></div>
+    <div class="sheet-view"><img id="sheetImg" alt=""><svg id="sheetSvg" viewBox="0 0 210 297"></svg></div>
+  </div>
+</div>
 <div class="overlay" id="confirmDialog" hidden>
   <div class="dialog" role="alertdialog">
     <h3 id="cfTitle"></h3>
@@ -435,12 +566,13 @@ td.ed-col button{min-height:34px;padding:4px 12px;font-size:14px}
 </div>
 <div class="overlay" id="helpDialog" hidden>
   <div class="dialog help" role="dialog" aria-labelledby="helpTitle">
-    <h3 id="helpTitle">使い方（4つのステップ）</h3>
+    <h3 id="helpTitle">使い方（5つのステップ）</h3>
     <ol>
       <li><b>① 学生を登録</b>：学生のエクセル（学籍番号・氏名・クラス）を読み込みます。新しい期になったら、クラスだけ入れて読み込みます。</li>
       <li><b>② 試験を登録</b>：「＋新しい試験」を押して、試験名と期を入れます。設問のエクセル（設問番号・分類・正答・配点）を読み込みます。</li>
-      <li><b>③ マークを読み込む</b>：試験を選んで、らく点マーク君などで作ったマークのエクセルを読み込みます。</li>
-      <li><b>④ 結果を見る</b>：試験とクラスを選ぶと、結果が出ます。「この表をエクセルで保存」で保存できます。</li>
+      <li><b>③ マークシートを作成</b>：試験と学生を選んで、マークシートを印刷します。</li>
+      <li><b>④ マークを読み込む</b>：スキャンしたPDFを入れると、マークを読み取ります。うすいマークは画像を見て確認します。らく点マーク君などのエクセルも読み込めます。</li>
+      <li><b>⑤ 結果を見る</b>：試験とクラスを選ぶと、結果が出ます。「この表をエクセルで保存」で保存できます。</li>
     </ol>
     <div class="small muted">画面の上の4つの四角で、どこまで終わったかがわかります。青く光っているところが「次にやること」です。<br>
     文字が小さいときは、右上の「文字の大きさ」で「大」「特大」を選んでください。</div>
@@ -631,6 +763,14 @@ const HELP = {
     <p><b>プレメンを受ける新入生</b>は、<b>入学する期</b>を選んで、クラスを空欄のまま読み込んでください。「プレメン（クラス未定）」として登録されます。クラスが決まったら、クラスを入れて「追加・更新」で読み込むと、本当のクラスに変わります。</p>`],
   stuTpl: ['入力用エクセルのダウンロード', `<p>登録済みの学生と、①で選んだ期のクラスが入った状態でダウンロードされます。</p>
     <p>新しい期のときは、クラスの列だけ入力して、③で読み込んでください。</p>`],
+  sheets: ['マークシートの作成', `<p>試験を選んで、50問か100問のシートを印刷します。</p>
+    <p><b>個人用</b>：クラス・名前・QRコードが入ったシートです。学生はマークをぬるだけです。</p>
+    <p><b>名前なし（予備）</b>：学生が名前を書いて、学籍番号の数字7ケタをぬります。</p>
+    <p>印刷するときは、倍率を「100%」にしてください。「PDFに保存」を選ぶと、PDFにもできます。</p>`],
+  omr: ['スキャンしたPDFの読み込み', `<p>「③ マークシートを作成」で印刷したシートをスキャンして、そのPDFを入れてください（300dpi・グレースケールがおすすめ）。</p>
+    <p>シートの向きや順番はばらばらでもかまいません。QRコードで、だれのシートかを読みます。</p>
+    <p>うすいマークや2つぬってあるマークは、自動で決めずに「確認が必要なマーク」に出ます。画像を見て、1〜4のキーかクリックで答えを決めてください。</p>
+    <p>最後に「確定して保存」を押すと、マークデータとして保存されます。</p>`],
   examTerm: ['どの期の学生情報を使うか', `<p>結果やマークの一覧のクラスは、ここで選んだ期のクラスで表示します。</p>
     <p>例：「2026年 10月期」を選ぶと、2610期のクラスで表示します。</p>
     <p>設問のエクセルの「期」の欄に書いてもかまいません。</p>`],
@@ -1212,6 +1352,7 @@ document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab
 function renderAll(){
   if(S.curExam && !S.exams[S.curExam]) S.curExam = null;
   renderExamChips(); renderStudents(); renderQuestions(); renderMarks(); renderResults(); renderGuide();
+  if(typeof renderSheetsTab === 'function') renderSheetsTab();
 }
 /* ----- 次にやること ----- */
 function showTab(name){
@@ -1223,8 +1364,9 @@ function renderGuide(){
   const items = [
     {tab:'students', t:'① 学生を登録'},
     {tab:'exams', t:'② 試験を登録'},
-    {tab:'marks', t:'③ マークを読み込む'},
-    {tab:'results', t:'④ 結果を見る'},
+    {tab:'sheets', t:'③ マークシートを作成'},
+    {tab:'marks', t:'④ マークを読み込む'},
+    {tab:'results', t:'⑤ 結果を見る'},
   ];
   const cur = (document.querySelector('#tabs button.active') || {}).dataset;
   $('guide').innerHTML = items.map(it => `<button class="g-item ${cur && cur.tab === it.tab ? 'cur' : ''}" data-tab="${it.tab}"><span class="g-t">${it.t}</span></button>`).join('');
@@ -1262,6 +1404,685 @@ document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => {
   $('resOpts').querySelectorAll('input').forEach(i => i.checked = on.has(i.value));
   renderResults();
 });
+/* ================================================================
+   マークシート（作成・読み取り）
+   ・レイアウトは mm 単位。印刷と読み取りで同じ関数を使う。
+   ================================================================ */
+const SHEET = (() => {
+  const CORNERS = [[10,10],[192,10],[10,279],[192,279]], CS = 8;
+  const INK = '#D9481C', SUB = '#555555';
+  const PT = 0.3528;   // 1pt = 0.3528mm
+
+  /* ---------- レイアウト ---------- */
+  function layout(n, kind){
+    const L = { n, kind, corners: CORNERS.map(([x, y]) => [x + CS/2, y + CS/2]), questions: [], idDigits: [] };
+    let y;
+    if(kind === 'personal'){ y = 67; L.qr = {x:158, y:36, s:30}; }
+    else {
+      const bx = 118, by = 35, cw = 10, rh = 5.2;
+      L.idGrid = {bx, by, cw, rh};
+      for(let c = 0; c < 7; c++){
+        const cells = [];
+        for(let d = 0; d < 10; d++) cells.push([bx + cw*c + cw/2, by + 8 + rh*d + rh/2 + 1]);
+        L.idDigits.push(cells);
+      }
+      y = by + 8 + rh*10 + 2;   // 97
+      L.qr = {x:20, y:72, s:22};
+    }
+    const big = n > 50;
+    const instrY = y + (kind === 'personal' ? 6 : 4), instrH = big ? 16 : 22;
+    L.instr = {y: instrY, h: instrH};
+    const top = instrY + instrH + 3;
+    const cols = big ? 4 : 3, per = Math.ceil(n / cols);
+    const bottom = big ? 276 : 274;
+    const rh = Math.min(9, (bottom - top - 8) / per);
+    const colw = 170 / cols;
+    L.bub = big ? {w:5.8, h:3.4} : {w:6.4, h:4.0};
+    L.idBub = {w:6.0, h:3.6};
+    L.ans = {top, cols, per, rh, colw, y0: top + 8, big};
+    for(let col = 0; col < cols; col++){
+      const x0 = 20 + colw*col, rows = Math.min(per, n - per*col);
+      for(let r = 0; r < rows; r++){
+        const cy = top + 8 + 6 + rh*r + rh/2;
+        const cells = [];
+        for(let k = 0; k < 4; k++) cells.push([big ? x0 + 14 + 7.8*k : x0 + 19 + 9*k, cy]);
+        L.questions.push({no: per*col + r + 1, col, x0, cy, cells});
+      }
+    }
+    return L;
+  }
+
+  /* ---------- SVG（印刷用） ---------- */
+  const esc2 = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function T(x, y, s, pt, o = {}){
+    return `<text x="${x}" y="${y}" font-size="${(pt*PT).toFixed(3)}" fill="${o.fill || '#000'}"${o.anchor ? ` text-anchor="${o.anchor}"` : ''}${o.bold ? ' font-weight="700"' : ''}>${esc2(s)}</text>`;
+  }
+  function bubble(cx, cy, w, h, label, pt){
+    return `<ellipse cx="${cx}" cy="${cy}" rx="${w/2}" ry="${h/2}" fill="#fff" stroke="${INK}" stroke-width="0.25"/>` +
+      (label !== '' ? T(cx, cy + h*0.27, label, pt, {fill: INK, anchor: 'middle'}) : '');
+  }
+  function qrPath(text, x, y, s){
+    if(typeof qrcode !== 'function') return `<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="none" stroke="#999" stroke-width="0.3"/>` + T(x + s/2, y + s/2, 'QR', 8, {anchor:'middle', fill:'#999'});
+    const q = qrcode(0, 'M'); q.addData(text); q.make();
+    const m = q.getModuleCount(), quiet = 0, c = s / (m + quiet*2);
+    let d = '';
+    for(let r = 0; r < m; r++) for(let k = 0; k < m; k++) if(q.isDark(r, k)){
+      const px = x + (k + quiet)*c, py = y + (r + quiet)*c;
+      d += `M${px.toFixed(3)} ${py.toFixed(3)}h${c.toFixed(3)}v${c.toFixed(3)}h${(-c).toFixed(3)}z`;
+    }
+    return `<path d="${d}" fill="#000"/>`;
+  }
+  function svg(opt){
+    // opt: {exam, n, kind, st, cls, code}
+    const L = layout(opt.n, opt.kind), big = L.ans.big;
+    let o = '';
+    // 四すみの黒い四角（右下だけ白い点）
+    CORNERS.forEach(([x, y], i) => {
+      o += `<rect x="${x}" y="${y}" width="${CS}" height="${CS}" fill="#000"/>`;
+      if(i === 3) o += `<rect x="${x + 2.5}" y="${y + 2.5}" width="3" height="3" fill="#fff"/>`;
+    });
+    // 見出し
+    o += T(105, 24, '解答用紙', 17, {anchor:'middle', bold:true}) + T(105, 30, 'かいとうようし', 7.5, {anchor:'middle', fill:SUB});
+    o += T(22, 24, opt.exam.name, 10);
+    o += T(188, 24, opt.kind === 'personal' ? '個人用シート' : '予備シート（なまえ を かいて ください）', 8, {anchor:'end', fill:SUB});
+    if(opt.kind === 'personal'){
+      const y0 = 35, st = opt.st;
+      o += `<rect x="20" y="${y0}" width="132" height="32" fill="none" stroke="#000" stroke-width="0.28"/>`;
+      [['クラス', opt.cls || ''], ['学籍番号', st.id], ['氏名（英字）', st.nameEn], ['氏名', st.nameKana]].forEach(([k, v], i) => {
+        const yy = y0 + 8*i;
+        if(i) o += `<line x1="20" y1="${yy}" x2="152" y2="${yy}" stroke="#000" stroke-width="0.14"/>`;
+        o += T(23, yy + 5.5, k, 8.5, {fill:SUB}) + T(52, yy + 5.8, v, 12);
+      });
+      o += `<line x1="49" y1="${y0}" x2="49" y2="${y0 + 32}" stroke="#000" stroke-width="0.14"/>`;
+      o += qrPath(`KKS1|${opt.exam.id}|${st.id}|${opt.n}`, L.qr.x, L.qr.y, L.qr.s);
+      o += T(173, y0 + 34.5, 'このQRコードに かかないで ください', 5.5, {anchor:'middle', fill:SUB});
+    }else{
+      const y0 = 35;
+      o += `<rect x="20" y="${y0}" width="88" height="24" fill="none" stroke="#000" stroke-width="0.28"/>`;
+      ['クラス', '氏名'].forEach((k, i) => {
+        const yy = y0 + 12*i;
+        if(i) o += `<line x1="20" y1="${yy}" x2="108" y2="${yy}" stroke="#000" stroke-width="0.14"/>`;
+        o += T(23, yy + 7.5, k, 8.5, {fill:SUB});
+      });
+      o += `<line x1="38" y1="${y0}" x2="38" y2="${y0 + 24}" stroke="#000" stroke-width="0.14"/>`;
+      o += T(20, y0 + 29, '学籍番号の アルファベット（B・C・D など）は かかないで、', 6.8, {fill:SUB});
+      o += T(20, y0 + 33, '右の 数字 7ケタ だけ を かいて、ぬって ください。', 6.8, {fill:SUB});
+      o += qrPath(`KKS1|${opt.exam.id}||${opt.n}`, L.qr.x, L.qr.y, L.qr.s);
+      o += T(L.qr.x + L.qr.s + 3, L.qr.y + L.qr.s - 1, 'このQRコードに かかないで ください', 5.5, {fill:SUB});
+      const {bx, by, cw, rh} = L.idGrid, H = 8 + rh*10 + 2;
+      o += `<rect x="${bx}" y="${by}" width="${cw*7}" height="${H}" fill="none" stroke="#000" stroke-width="0.28"/>`;
+      o += T(bx + cw*3.5, by - 1.5, '学籍番号（数字7ケタ）', 7.5, {anchor:'middle', fill:SUB});
+      o += `<line x1="${bx}" y1="${by + 8}" x2="${bx + cw*7}" y2="${by + 8}" stroke="#000" stroke-width="0.14"/>`;
+      for(let c = 1; c < 7; c++) o += `<line x1="${bx + cw*c}" y1="${by}" x2="${bx + cw*c}" y2="${by + H}" stroke="#000" stroke-width="0.1"/>`;
+      L.idDigits.forEach(col => col.forEach(([cx, cy], d) => { o += bubble(cx, cy, L.idBub.w, L.idBub.h, d, 6.2); }));
+    }
+    // 注意の文
+    const iy = L.instr.y, ih = L.instr.h;
+    o += `<rect x="20" y="${iy}" width="170" height="${ih}" rx="2" fill="#F4F4F4"/>`;
+    const lines = ['・HB か B の えんぴつ で、○ の 中 を こく ぬって ください。（ボールペンは ×）',
+      '・けす ときは、けしゴム で きれいに けして ください。',
+      '・1つ の もんだい に、こたえ は 1つ だけ ぬって ください。',
+      '・この かみ を おったり、よごしたり しないで ください。'];
+    lines.forEach((s, i) => { o += big ? T(23, iy + 4.2 + 3.4*i, s, 6.6) : T(23, iy + 5.5 + 4.6*i, s, 7.6); });
+    const ex = 140, ky = big ? [4.5, 3.4, 9.5, 13] : [5, 3.8, 13, 18];
+    o += T(ex, iy + ky[0], 'よい れい', 7, {fill:SUB});
+    o += `<ellipse cx="${ex + 22}" cy="${iy + ky[1]}" rx="3.2" ry="2" fill="#262626" stroke="${INK}" stroke-width="0.25"/>`;
+    o += T(ex, iy + ky[2], 'わるい れい', 7, {fill:SUB});
+    for(let k = 0; k < 4; k++){
+      const cx = ex + 4 + 9*k, cy = iy + ky[3];
+      o += bubble(cx, cy, 6.4, 4, '', 6);
+      if(k === 0) o += `<path d="M${cx-2} ${cy} L${cx-0.5} ${cy+1.5} L${cx+2.4} ${cy-1.8}" fill="none" stroke="#000" stroke-width="0.32"/>`;
+      if(k === 1) o += `<line x1="${cx-2.6}" y1="${cy}" x2="${cx+2.6}" y2="${cy}" stroke="#000" stroke-width="0.32"/>`;
+      if(k === 2) o += `<circle cx="${cx}" cy="${cy}" r="0.8" fill="#000"/>`;
+      if(k === 3) o += `<ellipse cx="${cx}" cy="${cy}" rx="3.2" ry="2" fill="#c7c7c7" stroke="${INK}" stroke-width="0.25"/>`;
+    }
+    // 解答欄
+    const A = L.ans;
+    o += T(20, A.top + 4.5, '解答欄（かいとうらん）', 9);
+    for(let col = 0; col < A.cols; col++){
+      const x0 = 20 + A.colw*col, rows = Math.min(A.per, opt.n - A.per*col);
+      if(rows <= 0) continue;
+      o += `<rect x="${x0 + 1}" y="${A.y0}" width="${A.colw - 2}" height="${A.rh*rows + 6}" fill="none" stroke="#000" stroke-width="0.28"/>`;
+      o += T(x0 + (big ? 6 : 7), A.y0 + 4.3, '番号', 6.5, {anchor:'middle', fill:SUB});
+      for(let k = 0; k < 4; k++) o += T(big ? x0 + 14 + 7.8*k : x0 + 19 + 9*k, A.y0 + 4.3, k + 1, 6.5, {anchor:'middle', fill:SUB});
+      o += `<line x1="${x0 + 1}" y1="${A.y0 + 6}" x2="${x0 + A.colw - 1}" y2="${A.y0 + 6}" stroke="#000" stroke-width="0.14"/>`;
+      for(let r = 5; r < rows; r += 5){
+        const yy = A.y0 + 6 + A.rh*r;
+        o += `<line x1="${x0 + 1}" y1="${yy}" x2="${x0 + A.colw - 1}" y2="${yy}" stroke="${SUB}" stroke-width="0.18"/>`;
+      }
+    }
+    L.questions.forEach(q => {
+      o += T(q.x0 + (big ? 6 : 7), q.cy + (big ? 1.3 : 1.6), q.no, big ? 8 : 9.5, {anchor:'middle'});
+      q.cells.forEach(([cx, cy], k) => { o += bubble(cx, cy, L.bub.w, L.bub.h, k + 1, big ? 5.6 : 6.2); });
+    });
+    o += T(105, 286, `シート番号 ${opt.code}　／　この かみ を おらないで ください`, 6.5, {anchor:'middle', fill:SUB});
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="sheet" viewBox="0 0 210 297" width="210mm" height="297mm" font-family="'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif">${o}</svg>`;
+  }
+
+  /* ================= 読み取り ================= */
+  const TH_DARK = 150, TH_LIGHT = 215;
+  const TH_ANS = {LO: 0.075, HI: 0.14, LIGHT: 0.19};   // 20枚の試しのスキャンで決めた基準
+  const TH_ID  = {LO: 0.10,  HI: 0.15, LIGHT: 0.25};   // 学籍番号の欄は○が小さく、数字が濃く見えるので別の基準
+
+  function solveH(src, dst){   // src(mm) → dst(px) の射影変換
+    const A = [], b = [];
+    for(let i = 0; i < 4; i++){
+      const [x, y] = src[i], [u, v] = dst[i];
+      A.push([x, y, 1, 0, 0, 0, -u*x, -u*y]); b.push(u);
+      A.push([0, 0, 0, x, y, 1, -v*x, -v*y]); b.push(v);
+    }
+    for(let c = 0; c < 8; c++){
+      let p = c; for(let r = c + 1; r < 8; r++) if(Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+      for(let r = 0; r < 8; r++){ if(r === c) continue; const f = A[r][c] / A[c][c]; for(let k = c; k < 8; k++) A[r][k] -= f*A[c][k]; b[r] -= f*b[c]; }
+    }
+    const h = b.map((v, i) => v / A[i][i]);
+    return (x, y) => { const w = h[6]*x + h[7]*y + 1; return [(h[0]*x + h[1]*y + h[2]) / w, (h[3]*x + h[4]*y + h[5]) / w]; };
+  }
+
+  function findCorners(g, w, h){
+    const side = Math.round(Math.min(w, h) * 0.16);
+    const pxmm = Math.min(w, h) / 210, exp = 8 * pxmm;
+    const wins = [[0, 0], [w - side, 0], [0, h - side], [w - side, h - side]];
+    const target = [[0, 0], [w, 0], [0, h], [w, h]];
+    const seen = new Uint8Array(side*side), stack = new Int32Array(side*side);
+    return wins.map(([ox, oy], wi) => {
+      seen.fill(0); let best = null;
+      for(let yy = 0; yy < side; yy++) for(let xx = 0; xx < side; xx++){
+        const i0 = yy*side + xx;
+        if(seen[i0] || g[(oy + yy)*w + ox + xx] >= 128) continue;
+        let sp = 0, area = 0, sx = 0, sy = 0, x1 = xx, x2 = xx, y1 = yy, y2 = yy;
+        stack[sp++] = i0; seen[i0] = 1;
+        while(sp){
+          const i = stack[--sp], px = i % side, py = (i / side) | 0;
+          area++; sx += px; sy += py;
+          if(px < x1) x1 = px; if(px > x2) x2 = px; if(py < y1) y1 = py; if(py > y2) y2 = py;
+          const nb = [px > 0 ? i - 1 : -1, px < side - 1 ? i + 1 : -1, py > 0 ? i - side : -1, py < side - 1 ? i + side : -1];
+          for(const j of nb){ if(j < 0 || seen[j]) continue; const jx = j % side, jy = (j / side) | 0;
+            if(g[(oy + jy)*w + ox + jx] < 128){ seen[j] = 1; stack[sp++] = j; } }
+        }
+        const bw = x2 - x1 + 1, bh = y2 - y1 + 1, fill = area / (bw*bh);
+        if(bw < exp*0.55 || bw > exp*1.6 || bh < exp*0.55 || bh > exp*1.6 || bw/bh < 0.7 || bw/bh > 1.4 || fill < 0.6) continue;
+        const cx = ox + sx/area, cy = oy + sy/area;
+        const d = Math.hypot(cx - target[wi][0], cy - target[wi][1]);
+        if(!best || d < best.d) best = {x: cx, y: cy, fill, d};
+      }
+      return best;
+    });
+  }
+
+  // 向きを決めて、mm → px の変換を作る
+  function homography(g, w, h, L){
+    const P = findCorners(g, w, h);
+    if(P.some(p => !p)) return null;
+    const dot = P.reduce((m, p, i) => p.fill < P[m].fill ? i : m, 0);
+    const C = [0, 1, 3, 2], LC = [3, 2, 0, 1], j = C.indexOf(dot);
+    const src = [], dst = [];
+    for(let t = 0; t < 4; t++){ src.push(L.corners[LC[t]]); const p = P[C[(j + t) % 4]]; dst.push([p.x, p.y]); }
+    const M = solveH(src, dst);
+    const a = M(...L.corners[0]), b = M(...L.corners[1]);
+    return {M, sc: Math.hypot(b[0] - a[0], b[1] - a[1]) / (L.corners[1][0] - L.corners[0][0]),
+      rot: ['正しい向き', '右に90°', '180°', '左に90°'][[3, 1, 0, 2].indexOf(dot)]};
+  }
+
+  // 1つのマークの中の「濃い部分」と「うすい灰色の部分」の割合
+  function sample(g, w, h, H, cx, cy, bw, bh){
+    const rx = bw/2 * 0.8125, ry = bh/2 * 0.725, step = 1 / H.sc;
+    let n = 0, dk = 0, lt = 0;
+    for(let dy = -ry; dy <= ry; dy += step) for(let dx = -rx; dx <= rx; dx += step){
+      if((dx/rx)**2 + (dy/ry)**2 > 1) continue;
+      const [px, py] = H.M(cx + dx, cy + dy), ix = Math.round(px), iy = Math.round(py);
+      if(ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+      const v = g[iy*w + ix]; n++; if(v < TH_DARK) dk++; if(v < TH_LIGHT) lt++;
+    }
+    return n ? [dk/n, lt/n] : [0, 0];
+  }
+
+  // 判定：ok / faint（うすい）/ pale（とてもうすい）/ double（2つ）/ blank
+  function judge(vals, th = TH_ANS){
+    const {LO, HI, LIGHT} = th;
+    const a = vals.map(v => v[0]), b = vals.map(v => v[1]);
+    const o = a.map((_, i) => i).sort((x, y) => a[y] - a[x]);
+    if(a[o[1]] >= LO) return {st: 'double', ans: null, cands: o.filter(i => a[i] >= LO)};
+    if(a[o[0]] >= HI) return {st: 'ok', ans: o[0]};
+    if(a[o[0]] >= LO) return {st: 'faint', ans: o[0]};
+    const ol = b.map((_, i) => i).sort((x, y) => b[y] - b[x]);
+    if(b[ol[0]] >= LIGHT){
+      if(b[ol[1]] >= LIGHT) return {st: 'double', ans: null, cands: ol.filter(i => b[i] >= LIGHT)};
+      return {st: 'pale', ans: ol[0]};
+    }
+    return {st: 'blank', ans: null};
+  }
+
+  // mm の範囲を、まっすぐな画像にして切り出す（向きもそろう）
+  function crop(g, w, h, H, x1, y1, x2, y2, k){
+    const W = Math.round((x2 - x1)*k), Hh = Math.round((y2 - y1)*k);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+    const ctx = cv.getContext('2d'), im = ctx.createImageData(W, Hh), d = im.data;
+    for(let yy = 0; yy < Hh; yy++) for(let xx = 0; xx < W; xx++){
+      const [px, py] = H.M(x1 + xx/k, y1 + yy/k), ix = Math.round(px), iy = Math.round(py);
+      const v = (ix >= 0 && iy >= 0 && ix < w && iy < h) ? g[iy*w + ix] : 255, o = (yy*W + xx)*4;
+      d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255;
+    }
+    ctx.putImageData(im, 0, 0);
+    return cv;
+  }
+
+  function readQR(canvas, g, w, h, H){
+    if(typeof jsQR !== 'function') return '';
+    const tryCanvas = cv => {
+      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+      const r = jsQR(d.data, cv.width, cv.height, {inversionAttempts: 'dontInvert'});
+      return r ? r.data : '';
+    };
+    // まず、QRコードがあるはずの場所だけを、まっすぐにして読む
+    if(H){
+      for(const [x, y, s] of [[158, 36, 30], [20, 72, 22]]){
+        const t = tryCanvas(crop(g, w, h, H, x - 4, y - 4, x + s + 4, y + s + 4, 8));
+        if(t) return t;
+      }
+    }
+    // だめなら、ページ全体を小さくして読む
+    const sc = Math.min(1, 1400 / Math.max(w, h));
+    const cv = document.createElement('canvas'); cv.width = Math.round(w*sc); cv.height = Math.round(h*sc);
+    cv.getContext('2d').drawImage(canvas, 0, 0, cv.width, cv.height);
+    return tryCanvas(cv);
+  }
+
+  function parseQR(t){
+    if(!t) return null;
+    const p = t.split('|');
+    if(p[0] === 'KKS1') return {exam: p[1], sid: p[2] || '', n: parseInt(p[3], 10) || 50};
+    if(p.length === 2) return {exam: p[0], sid: p[1], n: 50};   // 試作シート
+    return null;
+  }
+
+  // 1ページを読む
+  function readPage(canvas, fallbackN){
+    const w = canvas.width, h = canvas.height;
+    const rgba = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+    const g = new Uint8Array(w*h);
+    for(let i = 0, j = 0; i < g.length; i++, j += 4) g[i] = (rgba[j]*299 + rgba[j + 1]*587 + rgba[j + 2]*114) / 1000;
+    const L0 = layout(50, 'personal');
+    const H = homography(g, w, h, L0);
+    if(!H) return {error: '四すみの黒い四角が見つかりませんでした。シートがずれていないか、全体がスキャンされているか確認してください。'};
+    const qrText = readQR(canvas, g, w, h, H), qr = parseQR(qrText);
+    const kind = qr ? (qr.sid ? 'personal' : 'spare') : 'spare';
+    const n = qr ? qr.n : fallbackN;
+    const L = layout(n, kind);
+    const res = {qr, qrText, kind, n, rot: H.rot, answers: [], status: [], vals: [], idRead: '', idStatus: [], crops: {}};
+    L.questions.forEach((q, i) => {
+      const vals = q.cells.map(([cx, cy]) => sample(g, w, h, H, cx, cy, L.bub.w, L.bub.h));
+      const j = judge(vals);
+      res.vals.push(vals); res.status.push(j.st);
+      res.answers.push(j.ans === null || j.ans === undefined ? '' : String(j.ans + 1));
+      if(j.st !== 'ok' && j.st !== 'blank'){
+        res.crops[i] = crop(g, w, h, H, q.x0 + 1, q.cy - L.ans.rh/2 - 0.3, q.x0 + L.ans.colw - 1, q.cy + L.ans.rh/2 + 0.3, 10).toDataURL('image/png');
+        res.status[i] = j.st; res.cands = res.cands || {}; res.cands[i] = j.cands || [j.ans];
+      }
+    });
+    if(kind === 'spare'){
+      let id = '', bad = false;
+      L.idDigits.forEach(col => {
+        const v = col.map(([cx, cy]) => sample(g, w, h, H, cx, cy, L.idBub.w, L.idBub.h));
+        const j = judge(v, TH_ID);
+        res.idStatus.push(j.st); (res.idVals = res.idVals || []).push(v);
+        if(j.ans === null || j.ans === undefined){ id += '?'; bad = true; } else { id += j.ans; if(j.st !== 'ok') bad = true; }
+      });
+      res.idRead = id; res.idBad = bad;
+      const g0 = L.idGrid;
+      res.idCrop = crop(g, w, h, H, g0.bx - 2, g0.by - 4, g0.bx + g0.cw*7 + 2, g0.by + 8 + g0.rh*10 + 3, 6).toDataURL('image/png');
+      res.nameCrop = crop(g, w, h, H, 19, 34, 109, 60, 5).toDataURL('image/png');
+    }
+    res.thumb = crop(g, w, h, H, 0, 0, 210, 297, 4).toDataURL('image/jpeg', 0.8);
+    res.layout = L;
+    return res;
+  }
+
+  return {layout, svg, readPage, judge};
+})();
+
+/* ================================================================
+   ③ マークシートを作成
+   ================================================================ */
+function shExam(){ return S.exams[$('shExam').value] || null; }
+function renderSheetsTab(){
+  const list = examList();
+  const sel = $('shExam'), v = sel.value || S.curExam || (list[0] && list[0].id) || '';
+  sel.innerHTML = list.length ? list.map(e => `<option value="${e.id}">${esc(e.name)}${e.term ? `（${e.term}期）` : ''}</option>`).join('') : '<option value="">（先に試験を登録してください）</option>';
+  if([...sel.options].some(o => o.value === v)) sel.value = v;
+  const ex = shExam();
+  const Q = ex ? ex.questions.length : 0;
+  $('shN50').disabled = Q > 50;
+  if(Q > 50) $('shN100').checked = true;
+  $('shQInfo').textContent = ex ? (Q ? `この試験は ${Q}問 です。` + (Q > 100 ? '（100問より多いので、シートが足りません）' : '') : 'この試験は、まだ設問が登録されていません。') : '';
+  fillClassSelect($('shClass'), 'すべてのクラス', tOf(ex));
+  renderSheetStudents();
+}
+function sheetStudents(){
+  const ex = shExam(); if(!ex) return [];
+  const t = tOf(ex), c = $('shClass').value;
+  return S.students.filter(s => clsOf(s, t) && (!c || clsOf(s, t) === c))
+    .sort((a, b) => clsSort(clsOf(a, t), clsOf(b, t)) || a.id.localeCompare(b.id));
+}
+let shChecked = new Set(), shKey = '';
+function renderSheetStudents(){
+  const ex = shExam(), list = sheetStudents(), t = tOf(ex);
+  const key = (ex && ex.id) + '|' + $('shClass').value;
+  if(key !== shKey){ shKey = key; shChecked = new Set(list.map(s => s.id)); }
+  $('shStuCount').textContent = `${[...shChecked].filter(id => list.some(s => s.id === id)).length} / ${list.length}人`;
+  $('shStuList').innerHTML = list.length ? list.map(s => `<label class="sh-stu"><input type="checkbox" value="${esc(s.id)}" ${shChecked.has(s.id) ? 'checked' : ''}>
+      <span class="c">${clsOf(s, t) === PRE ? 'プレメン' : esc(clsOf(s, t))}</span><span class="i">${esc(s.id)}</span><span class="n">${esc(s.nameEn)}</span><span class="k">${esc(s.nameKana)}</span></label>`).join('')
+    : `<div class="muted small" style="padding:12px">${ex ? (tOf(ex) + '期の学生が登録されていません。') : ''}</div>`;
+  $('shStuList').querySelectorAll('input').forEach(i => i.onchange = () => { i.checked ? shChecked.add(i.value) : shChecked.delete(i.value); renderSheetStudents(); });
+}
+function sheetJobs(){
+  const ex = shExam(); if(!ex) return {err: '試験を選んでください。'};
+  const n = $('shN100').checked ? 100 : 50, t = tOf(ex), jobs = [];
+  if($('shPersonal').checked) sheetStudents().filter(s => shChecked.has(s.id))
+    .forEach(s => jobs.push({exam: ex, n, kind: 'personal', st: s, cls: clsOf(s, t) === PRE ? 'プレメン' : clsOf(s, t), code: `${ex.id}-${s.id}`}));
+  const k = $('shSpare').checked ? Math.max(0, Math.min(500, parseInt($('shSpareN').value, 10) || 0)) : 0;
+  for(let i = 1; i <= k; i++) jobs.push({exam: ex, n, kind: 'spare', code: `${ex.id}-予備${i}`});
+  if(!jobs.length) return {err: '印刷するシートがありません。学生を選ぶか、名前なしシートの枚数を入れてください。'};
+  if(ex.questions.length > n) return {err: `この試験は ${ex.questions.length}問 あるので、${n}問のシートでは足りません。`};
+  return {jobs};
+}
+function sheetPreview(){
+  const r = sheetJobs();
+  if(r.err){ showMsg($('shMsg'), 'err', r.err); return; }
+  $('shPreview').innerHTML = SHEET.svg(r.jobs[0]);
+  $('shPreviewWrap').hidden = false;
+  showMsg($('shMsg'), 'ok', `全部で ${r.jobs.length}枚 です。下は1枚目の見本です。`);
+}
+function sheetPrint(){
+  const r = sheetJobs();
+  if(r.err){ showMsg($('shMsg'), 'err', r.err); return; }
+  $('printArea').innerHTML = r.jobs.map(j => SHEET.svg(j)).join('');
+  const z = document.body.style.zoom;
+  document.body.style.zoom = '1'; document.body.classList.add('printing');
+  const done = () => { document.body.classList.remove('printing'); document.body.style.zoom = z; $('printArea').innerHTML = ''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(() => { window.print(); }, 300);
+  showMsg($('shMsg'), 'ok', `${r.jobs.length}枚を印刷の画面に送りました。PDFにしたいときは、プリンターで「PDFに保存」を選んでください。`);
+}
+$('shExam').onchange = () => { shKey = ''; renderSheetsTab(); };
+$('shClass').onchange = renderSheetStudents;
+$('shAll').onclick = () => { sheetStudents().forEach(s => shChecked.add(s.id)); renderSheetStudents(); };
+$('shNone').onclick = () => { sheetStudents().forEach(s => shChecked.delete(s.id)); renderSheetStudents(); };
+$('shPreviewBtn').onclick = sheetPreview;
+$('shPrintBtn').onclick = sheetPrint;
+
+/* ================================================================
+   ④ スキャンしたPDFを読み込む
+   ================================================================ */
+const OMR = { sheets: [], items: [], cur: 0 };
+const ST_LABEL = {faint: 'うすい', pale: 'とてもうすい（消し跡かも）', double: '2つ以上ぬってある', id: '学籍番号を確認してください'};
+
+async function filesToCanvases(files, onProgress){
+  const out = [];
+  let total = 0, done = 0;
+  const pdfs = [];
+  for(const f of files){
+    if(/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)){
+      if(typeof pdfjsLib === 'undefined') throw new Error('PDFを読む部品が読み込めませんでした。ページを開き直してください。');
+      const doc = await pdfjsLib.getDocument({data: new Uint8Array(await f.arrayBuffer())}).promise;
+      pdfs.push({f, doc}); total += doc.numPages;
+    }else{ pdfs.push({f}); total += 1; }
+  }
+  return {total, async *pages(){
+    for(const p of pdfs){
+      if(p.doc){
+        for(let i = 1; i <= p.doc.numPages; i++){
+          const page = await p.doc.getPage(i);
+          const v1 = page.getViewport({scale: 1}), scale = 2400 / Math.max(v1.width, v1.height);
+          const vp = page.getViewport({scale});
+          const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+          const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+          await page.render({canvasContext: ctx, viewport: vp}).promise;
+          yield {cv, label: `${p.f.name} の ${i}枚目`};
+        }
+      }else{
+        const img = await createImageBitmap(p.f);
+        const scale = 2400 / Math.max(img.width, img.height);
+        const cv = document.createElement('canvas'); cv.width = Math.round(img.width*scale); cv.height = Math.round(img.height*scale);
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        yield {cv, label: p.f.name};
+      }
+    }
+  }};
+}
+
+async function omrRead(files){
+  const ex = markExam();
+  if(!ex || !ex.questions.length){ showMsg($('omrMsg'), 'err', '先に「② 試験を登録」で設問を登録して、上で試験を選んでください。'); return; }
+  OMR.sheets = []; OMR.items = []; OMR.cur = 0; OMR.exam = ex.id;
+  $('omrResult').hidden = true; $('omrMsg').className = 'msg';
+  $('omrProg').hidden = false; $('omrBar').style.width = '0%'; $('omrProgText').textContent = 'ファイルを開いています…';
+  let src;
+  try{ src = await filesToCanvases(files); }
+  catch(e){ $('omrProg').hidden = true; showMsg($('omrMsg'), 'err', e.message); return; }
+  const fallbackN = parseInt($('omrN').value, 10) || 50;
+  let k = 0;
+  for await (const {cv, label} of src.pages()){
+    k++;
+    $('omrProgText').textContent = `読み取り中… ${k} / ${src.total}枚`;
+    $('omrBar').style.width = (k / src.total * 100) + '%';
+    await new Promise(r => setTimeout(r, 0));
+    let r;
+    try{ r = SHEET.readPage(cv, fallbackN); }catch(e){ r = {error: '読み取りでエラーが起きました：' + e.message}; }
+    r.page = k; r.label = label;
+    OMR.sheets.push(r);
+  }
+  $('omrProg').hidden = true;
+  omrResolve();
+  omrRender();
+}
+
+// 学生・試験を決めて、確認リストを作る
+function omrResolve(){
+  const ex = S.exams[OMR.exam], Q = ex.questions.length, other = $('omrOther').checked;
+  // 確認ずみのものは、作り直しても覚えておく
+  const doneKeys = new Set(OMR.items.filter(it => it.done).map(it => it.s.page + ':' + it.q));
+  const curKey = OMR.items[OMR.cur] ? OMR.items[OMR.cur].s.page + ':' + OMR.items[OMR.cur].q : '';
+  OMR.items = [];
+  const bySid = {};
+  OMR.sheets.forEach(s => {
+    s.problems = [];
+    if(s.error){ s.problems.push(s.error); s.use = false; return; }
+    if(s.qr && s.qr.exam !== ex.id){
+      const e2 = S.exams[s.qr.exam];
+      if(!other){ s.problems.push(`ちがう試験のシートです（${e2 ? e2.name : s.qr.exam}）。`); s.use = false; return; }
+    }
+    s.use = true;
+    if(s.n < Q) s.problems.push(`この試験は ${Q}問 ありますが、シートは ${s.n}問 です。`);
+    // 学生
+    let sid = s.kind === 'personal' ? s.qr.sid : s.idRead;
+    if(s.manualSid) sid = s.manualSid;
+    const st = sid && !/\?/.test(sid) ? findStudent(sid) : null;
+    s.student = st; s.sid = st ? st.id : (sid && !/\?/.test(sid) ? sid : '');
+    if(!s.qr) s.problems.push('QRコードが読めませんでした（予備シートとして読みました）。');
+    if(!s.sid) s.problems.push('学籍番号が読めません。下で学生を選んでください。');
+    else if(!st) s.problems.push(`学籍番号「${s.sid}」は、学生情報に登録されていません。`);
+    if(s.sid){ (bySid[s.sid] = bySid[s.sid] || []).push(s); }
+    // 確認リスト
+    if(s.kind === 'spare' && s.idBad && !s.manualSid) OMR.items.push({s, q: 'id'});
+    s.status.forEach((st2, i) => { if(i < Q && st2 !== 'ok' && st2 !== 'blank') OMR.items.push({s, q: i}); });
+  });
+  Object.values(bySid).forEach(list => {
+    if(list.length > 1) list.forEach(s => s.problems.push(`同じ学生のシートが ${list.length}枚 あります（${list.map(x => x.page + '枚目').join('・')}）。いちばん後ろのシートを使います。`));
+  });
+  OMR.items.forEach(it => { if(doneKeys.has(it.s.page + ':' + it.q)) it.done = true; });
+  const ci = OMR.items.findIndex(it => it.s.page + ':' + it.q === curKey);
+  OMR.cur = ci >= 0 ? ci : Math.min(OMR.cur, Math.max(0, OMR.items.length - 1));
+}
+
+function omrStudentLabel(s){
+  if(s.student) return `${s.student.id}　${s.student.nameEn || ''}　${s.student.nameKana || ''}`;
+  return s.sid ? `${s.sid}（未登録）` : '学籍番号がわかりません';
+}
+function omrRender(){
+  const ok = OMR.sheets.filter(s => s.use), err = OMR.sheets.filter(s => s.problems.length);
+  const left = OMR.items.filter(it => !it.done).length;
+  $('omrResult').hidden = false;
+  $('omrStats').innerHTML = [['読み取ったシート', OMR.sheets.length + '枚'], ['使えるシート', ok.length + '枚'],
+    ['確認が必要なマーク', left ? `<span style="color:#b25b00">${left}</span> / ${OMR.items.length}` : `✓ 0 / ${OMR.items.length}`], ['注意があるシート', err.length + '枚']]
+    .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  omrRenderReview();
+  omrRenderSheets();
+  $('omrSave').textContent = `💾 確定して保存（${new Set(ok.filter(s => s.sid).map(s => s.sid)).size}人分）`;
+}
+
+function omrRenderReview(){
+  const box = $('omrReview');
+  if(!OMR.items.length){ box.innerHTML = '<div class="rv-done">✅ 確認が必要なマークはありません。下の「確定して保存」を押してください。</div>'; return; }
+  const it = OMR.items[OMR.cur], s = it.s;
+  const nav = `<div class="rv-nav"><b>確認が必要なマーク　${OMR.cur + 1} / ${OMR.items.length}</b>
+      <span class="small muted">（のこり ${OMR.items.filter(x => !x.done).length}）</span><span style="flex:1"></span>
+      <button class="btn" id="rvPrev">◀ 前へ</button><button class="btn" id="rvNext">次へ ▶</button></div>`;
+  const chips = `<div class="rv-chips">${OMR.items.map((x, i) => `<button class="rv-chip ${x.done ? 'done' : ''} ${i === OMR.cur ? 'cur' : ''}" data-i="${i}" title="${esc(omrStudentLabel(x.s))}">${x.q === 'id' ? '番号' : '問' + (x.q + 1)}</button>`).join('')}</div>`;
+  if(it.q === 'id'){
+    box.innerHTML = nav + `<div class="rv-card">
+      <div class="rv-img"><img src="${s.idCrop}" style="width:300px"><img src="${s.nameCrop}" style="width:300px;margin-top:8px"></div>
+      <div class="rv-side"><div class="rv-who">${s.page}枚目（予備シート）</div>
+        <div class="rv-why">${ST_LABEL.id}（読めた数字「${esc(s.idRead)}」）</div>
+        <div class="small muted">名前を見て、学生を選んでください。数字が合っていれば、そのままEnterでOKです。</div>
+        <input type="text" id="rvSid" list="rvStuList" placeholder="学籍番号か名前を入れて選ぶ" value="${esc(s.idRead.replace(/\?/g, ''))}" style="width:100%;margin:8px 0">
+        <datalist id="rvStuList">${S.students.map(x => `<option value="${esc(x.id)}">${esc(x.nameEn)} ${esc(x.nameKana)}</option>`).join('')}</datalist>
+        <button class="btn primary" id="rvSidOk">この学生にする（Enter）</button></div></div>` + chips;
+    $('rvSidOk').onclick = () => {
+      const v = $('rvSid').value.trim(); const st = findStudent(v) || S.students.find(x => norm(x.nameEn) === norm(v) || norm(x.nameKana) === norm(v));
+      // 登録されていない番号でも、数字7ケタならそのまま使える（あとで学生を登録すれば結果に名前が出る）
+      if(!st && !/^\d{7}$/.test(z2h(v))){ $('rvSid').classList.add('bad'); return; }
+      s.manualSid = st ? st.id : z2h(v); it.done = true; omrResolve();
+      if(!OMR.items[OMR.cur] || OMR.items[OMR.cur].done) omrNextOpen(); omrRender();
+    };
+    $('rvSid').onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); $('rvSidOk').click(); } };
+    setTimeout(() => $('rvSid').focus(), 30);
+  }else{
+    const q = it.q, L = s.layout, qq = L.questions[q], cur = s.answers[q];
+    const left = qq.x0 + 1, top = qq.cy - L.ans.rh/2 - 0.3, k = 10, show = 2;   // 表示倍率
+    const rings = qq.cells.map(([cx, cy], i) => {
+      const x = (cx - left)*k*show, y = (cy - top)*k*show, rw = L.bub.w*k*show*0.62, rh = L.bub.h*k*show*0.75;
+      const cls = String(i + 1) === cur ? 'pick' : ((s.cands && s.cands[q] || []).includes(i) ? 'cand' : '');
+      return `<button class="ring ${cls}" data-a="${i + 1}" style="left:${x - rw}px;top:${y - rh}px;width:${rw*2}px;height:${rh*2}px" title="${i + 1}にする"></button>`;
+    }).join('');
+    const w = (L.ans.colw - 2)*k*show;
+    box.innerHTML = nav + `<div class="rv-card">
+      <div class="rv-img"><div class="rv-crop" style="width:${w}px"><img src="${s.crops[q]}" style="width:${w}px">${rings}</div></div>
+      <div class="rv-side"><div class="rv-who">${esc(omrStudentLabel(s))}<br><span class="small muted">${s.page}枚目</span></div>
+        <div class="rv-why">問${q + 1}：${ST_LABEL[s.status[q]] || ''}</div>
+        <div class="rv-ans">${[1, 2, 3, 4].map(a => `<button class="btn ${cur === String(a) ? 'primary' : ''}" data-a="${a}">${a}</button>`).join('')}
+          <button class="btn ${cur === '' ? 'primary' : ''}" data-a="">空欄</button></div>
+        <button class="btn ok-btn" id="rvOk">✓ この答えでOK（Enter）</button>
+        <div class="small muted" style="margin-top:8px">キーボード：1〜4 で答えを決める、0 で空欄、Enter でOK、← → で前・次</div></div></div>` + chips;
+    box.querySelectorAll('[data-a]').forEach(b => b.onclick = () => omrSet(b.dataset.a));
+    $('rvOk').onclick = () => omrSet(cur);
+  }
+  $('rvPrev').onclick = () => { OMR.cur = Math.max(0, OMR.cur - 1); omrRenderReview(); };
+  $('rvNext').onclick = () => { OMR.cur = Math.min(OMR.items.length - 1, OMR.cur + 1); omrRenderReview(); };
+  box.querySelectorAll('.rv-chip').forEach(b => b.onclick = () => { OMR.cur = +b.dataset.i; omrRenderReview(); });
+}
+function omrSet(a){
+  const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
+  it.s.answers[it.q] = a; it.s.edited = it.s.edited || {}; it.s.edited[it.q] = true; it.done = true;
+  omrNextOpen(); omrRender();
+}
+function omrNextOpen(){
+  const n = OMR.items.length;
+  for(let d = 1; d <= n; d++){ const i = (OMR.cur + d) % n; if(!OMR.items[i].done){ OMR.cur = i; return; } }
+}
+document.addEventListener('keydown', e => {
+  if($('tab-marks').hidden || $('omrResult').hidden || !OMR.items.length) return;
+  if(!$('sheetDialog').hidden || !$('confirmDialog').hidden) return;
+  if(e.target.matches('input, select, textarea')) return;
+  const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
+  if(/^[1-4]$/.test(e.key)){ e.preventDefault(); omrSet(e.key); }
+  else if(e.key === '0'){ e.preventDefault(); omrSet(''); }
+  else if(e.key === 'Enter'){ e.preventDefault(); omrSet(it.s.answers[it.q]); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); $('rvNext').click(); }
+  else if(e.key === 'ArrowLeft'){ e.preventDefault(); $('rvPrev').click(); }
+});
+
+function omrRenderSheets(){
+  const Q = (S.exams[OMR.exam] || {questions: []}).questions.length;
+  $('omrSheets').innerHTML = `<thead><tr><th>枚目</th><th>種類</th><th>学生</th><th>読み取った答え（はじめの10問）</th><th>確認</th><th>注意</th><th></th></tr></thead><tbody>` +
+    OMR.sheets.map((s, i) => {
+      const items = OMR.items.filter(it => it.s === s), left = items.filter(it => !it.done).length;
+      return `<tr${s.use ? '' : ' class="unused"'}><td class="num">${s.page}</td><td>${s.error ? '—' : (s.kind === 'personal' ? '個人用' : '予備') + (s.n ? ` ${s.n}問` : '')}</td>
+        <td>${s.error ? '' : esc(omrStudentLabel(s))}</td>
+        <td class="mono">${s.error ? '' : s.answers.slice(0, 10).map(a => a || '-').join(' ')}</td>
+        <td>${items.length ? (left ? `<span class="pre-tag">のこり ${left}</span>` : '✓') : ''}</td>
+        <td class="small">${s.problems.map(esc).join('<br>')}</td>
+        <td>${s.error ? '' : `<button class="btn" data-sheet="${i}">画像を見る</button>`}</td></tr>`;
+    }).join('') + '</tbody>';
+  $('omrSheets').querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => omrOpenSheet(+b.dataset.sheet));
+}
+
+// シート全体の画像と、読み取った答え（クリックで直せる）
+function omrOpenSheet(i){
+  const s = OMR.sheets[i], L = s.layout;
+  OMR.sheetIdx = i;
+  $('sheetTitle').textContent = `${s.page}枚目：${omrStudentLabel(s)}`;
+  const draw = () => {
+    let o = '';
+    L.questions.forEach((q, qi) => {
+      const st = s.status[qi], a = s.answers[qi], edited = s.edited && s.edited[qi];
+      q.cells.forEach(([cx, cy], k) => {
+        const on = a === String(k + 1);
+        let cls = on ? (edited ? 'e' : (st === 'ok' ? 'g' : 'y')) : '';
+        if(!on && st !== 'ok' && st !== 'blank' && !edited && (s.cands && s.cands[qi] || []).includes(k)) cls = 'y';
+        o += `<ellipse class="hit ${cls}" data-q="${qi}" data-a="${k + 1}" cx="${cx}" cy="${cy}" rx="${L.bub.w/2 + 0.6}" ry="${L.bub.h/2 + 0.6}"/>`;
+      });
+    });
+    $('sheetSvg').innerHTML = o;
+    $('sheetSvg').querySelectorAll('.hit').forEach(el => el.onclick = () => {
+      const qi = +el.dataset.q, a = el.dataset.a;
+      s.answers[qi] = s.answers[qi] === a ? '' : a;
+      s.edited = s.edited || {}; s.edited[qi] = true;
+      OMR.items.forEach(it => { if(it.s === s && it.q === qi) it.done = true; });
+      draw(); omrRender();
+    });
+  };
+  $('sheetImg').src = s.thumb;
+  draw();
+  $('sheetDialog').hidden = false;
+}
+$('sheetClose').onclick = () => { $('sheetDialog').hidden = true; };
+
+async function omrSave(){
+  const ex = S.exams[OMR.exam]; if(!ex) return;
+  const left = OMR.items.filter(it => !it.done).length;
+  if(left){
+    const go = await confirmBox('まだ確認していないマークがあります',
+      `確認していないマークが <b>${left}か所</b> あります。<br>そのまま保存すると、うすいマークは読み取った候補の答えで、2つぬってあるものは空欄で保存されます。`,
+      'このまま保存する', 'もどって確認する');
+    if(!go) return;
+  }
+  const Q = ex.questions.length, marks = {};
+  OMR.sheets.filter(s => s.use && s.sid).sort((a, b) => a.page - b.page)
+    .forEach(s => { marks[s.sid] = Array.from({length: Q}, (_, i) => s.answers[i] || ''); });
+  const n = Object.keys(marks).length;
+  if(!n){ showMsg($('omrMsg'), 'err', '保存できるシートがありません。'); return; }
+  let replace = $('markMode').value === 'replace';
+  const before = Object.keys(ex.marks || {}).length;
+  if(replace && before){
+    replace = await confirmBox('前のマークが消えます',
+      `「${esc(ex.name)}」には、すでに <b>${before}人分</b>のマークがあります。<br>「全部入れ替え」にすると、前のマークは全部消えて、今回の <b>${n}人分</b>だけになります。<br><br>別の日に受けた学生を足すときは、「追加・更新」を選んでください。`,
+      '消して入れ替える', '追加・更新で保存する');
+    if(!replace) $('markMode').value = 'merge';
+  }
+  if(replace) ex.marks = marks; else ex.marks = Object.assign(ex.marks || {}, marks);
+  await saveExam(ex);
+  renderAll();
+  $('omrResult').hidden = true; OMR.sheets = []; OMR.items = [];
+  showMsg($('omrMsg'), 'ok', `${n}人分のマークを「${ex.name}」に保存しました。「⑤ 結果を見る」で結果を見られます。`);
+}
+$('omrSave').onclick = omrSave;
+$('omrCancel').onclick = () => { $('omrResult').hidden = true; OMR.sheets = []; OMR.items = []; $('omrMsg').className = 'msg'; };
+$('omrFile').onchange = e => { const fs = [...(e.target.files || [])]; if(e.target.value !== undefined) try{ e.target.value = ''; }catch(_){} if(fs.length) omrRead(fs); };
+$('omrOther').onchange = () => { if(OMR.sheets.length){ omrResolve(); omrRender(); } };
+
+if(typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 initTermPickers();
 init();
 </script>
