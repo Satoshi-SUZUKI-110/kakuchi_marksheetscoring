@@ -117,14 +117,17 @@ tr.dup-row td{background:#fff6cc}
 <section id="tab-students">
   <div class="panel">
     <h2>学生情報の登録</h2>
-    <p class="lead">クラス・学籍番号・氏名を登録します。今のシートをそのままアップロードしてもかまいません（「学籍番号」と書かれた行を見出しとして読みます）。</p>
+    <p class="lead">学籍番号・氏名と、<b>期ごとのクラス</b>を登録します。学籍番号と氏名はずっと同じで、クラスだけを期ごとに記録します。今のシートをそのままアップロードしてもかまいません（「学籍番号」と書かれた行を見出しとして読みます。見出しが「2610期」のようになっていれば、その期のクラスとして読みます）。</p>
     <div class="steps">
-      <div class="step"><b>① 入力用エクセルを出力</b>
+      <div class="step"><b>① 期を選ぶ</b>
+        <div class="row"><input type="text" id="stuTerm" list="termList" size="6" placeholder="2610"> 期</div>
+        <div class="small muted" style="margin-top:6px">4月期＝◯◯04、7月期＝◯◯07、10月期＝◯◯10、1月期＝◯◯01（例：2026年10月期＝2610）</div></div>
+      <div class="step"><b>② 入力用エクセルを出力</b>
         <button class="btn" id="stuTpl">⬇ 学生情報エクセル</button>
-        <div class="small muted" style="margin-top:6px">登録済みの学生も入った状態で出力されます。</div></div>
-      <div class="step"><b>② 入力したエクセルをアップロード</b>
+        <div class="small muted" style="margin-top:6px">登録済みの学生と、選んだ期のクラスが入った状態で出力されます。新しい期のときは、クラスの列だけ入力してください。</div></div>
+      <div class="step"><b>③ 入力したエクセルをアップロード</b>
         <div class="row">
-          <select id="stuMode"><option value="merge">追加・更新（同じ学籍番号は上書き）</option><option value="replace">全部入れ替え</option></select>
+          <select id="stuMode"><option value="merge">追加・更新（同じ学籍番号は上書き）</option><option value="replace">この期のクラスを全部入れ替え</option></select>
           <label class="btn primary">⬆ アップロード<input type="file" id="stuFile" accept=".xlsx,.xls,.csv"></label>
         </div></div>
     </div>
@@ -133,7 +136,7 @@ tr.dup-row td{background:#fff6cc}
   <div class="panel">
     <div class="row" style="justify-content:space-between">
       <h2>登録済みの学生 <span class="badge" id="stuCount">0人</span></h2>
-      <div class="row"><select id="stuClassFilter"></select>
+      <div class="row"><select id="stuViewTerm"></select><select id="stuClassFilter"></select>
       <button class="btn danger" id="stuClear">全員削除</button></div>
     </div>
     <div class="msg warn" id="stuDupBanner" hidden style="margin-top:10px"></div>
@@ -148,9 +151,10 @@ tr.dup-row td{background:#fff6cc}
     <p class="lead">試験名、設問番号、設問分類、正答、配点を登録します。正答が2つ以上あるときは「1|3」のように「|」でつないでください。</p>
     <div class="exam-list" id="examChips"></div>
     <div class="steps">
-      <div class="step"><b>① 試験名</b>
+      <div class="step"><b>① 試験名と期</b>
         <input type="text" id="examName" placeholder="例：2610期 期末試験" style="width:100%">
-        <div class="small muted" style="margin-top:6px">エクセルの「試験名」欄に書いてもOKです。</div></div>
+        <div class="row" style="margin-top:6px"><input type="text" id="examTerm" list="termList" size="6" placeholder="2610"> 期の試験</div>
+        <div class="small muted" style="margin-top:6px">結果のクラスは、この期のクラスで出します。エクセルの「試験名」「期」欄に書いてもOKです。</div></div>
       <div class="step"><b>② 入力用エクセルを出力</b>
         <button class="btn" id="qTpl">⬇ 設問エクセル</button>
         <div class="small muted" style="margin-top:6px">選んでいる試験の設問が入った状態で出力されます。</div></div>
@@ -159,7 +163,7 @@ tr.dup-row td{background:#fff6cc}
         <div class="small muted" style="margin-top:6px">選んでいる試験の設問を入れ替えます。</div></div>
     </div>
     <div class="row" style="margin-top:12px">
-      <button class="btn" id="examRename">試験名を保存</button>
+      <button class="btn" id="examRename">試験名・期を保存</button>
       <button class="btn danger" id="examDelete">この試験を削除</button>
     </div>
     <div class="msg" id="qMsg"></div>
@@ -224,6 +228,7 @@ tr.dup-row td{background:#fff6cc}
   </div>
 </section>
 </main>
+<datalist id="termList"></datalist>
 </div>
 <div class="overlay" id="dupDialog" hidden>
   <div class="dialog" role="alertdialog" aria-labelledby="dupTitle">
@@ -280,15 +285,19 @@ function enqueue(action, body){
   queue = p; return p;
 }
 const saveStudents = () => enqueue('saveStudents', {rows: S.students});
-const saveExam = ex => enqueue('saveExam', {exam: {id:ex.id, name:ex.name, created:ex.created, questions:ex.questions, marks:ex.marks}});
+const saveExam = ex => enqueue('saveExam', {exam: {id:ex.id, name:ex.name, term:ex.term || '', created:ex.created, questions:ex.questions, marks:ex.marks}});
 const deleteDoc = name => enqueue('deleteExam', {id: name.replace(/^exam-/, '')});
 
+function normStudents(list){
+  return (list || []).map(s => ({id: s.id, nameEn: s.nameEn || '', nameKana: s.nameKana || '',
+    classes: s.classes || (s.cls ? {[termNow()]: s.cls} : {})}));
+}
 async function login(pw, remember){
   PW = pw;
   $('loginMsg').textContent = '確認しています…'; $('loginBtn').disabled = true;
   try{
     const j = await api('load');
-    S.students = j.data.students || []; S.exams = j.data.exams || {};
+    S.students = normStudents(j.data.students); S.exams = j.data.exams || {};
     try{ (remember ? localStorage : sessionStorage).setItem(PW_KEY, pw); }catch(e){}
     $('login').hidden = true; $('app').hidden = false;
     setStatus('✓ Googleドライブに保存しています', 'ok');
@@ -305,7 +314,7 @@ function logout(){
 }
 async function reload(){
   setStatus('読み込み中…');
-  try{ const j = await api('load'); S.students = j.data.students || []; S.exams = j.data.exams || {}; renderAll(); setStatus('✓ 最新のデータを読み込みました', 'ok'); }
+  try{ const j = await api('load'); S.students = normStudents(j.data.students); S.exams = j.data.exams || {}; renderAll(); setStatus('✓ 最新のデータを読み込みました', 'ok'); }
   catch(e){ setStatus('⚠ ' + errText(e), 'err'); }
 }
 function init(){
@@ -369,19 +378,45 @@ function findStudent(id){
   const c = S.students.filter(x => digits(x.id) === d);
   return c.length === 1 ? c[0] : null;
 }
-function classes(){
-  return [...new Set(S.students.map(s => s.cls).filter(Boolean))];
+/* ----- 期とクラス ----- */
+function termNow(){
+  const d = new Date(), y = d.getFullYear() % 100, m = d.getMonth() + 1;
+  return String(y).padStart(2,'0') + String(m >= 10 ? 10 : m >= 7 ? 7 : m >= 4 ? 4 : 1).padStart(2,'0');
 }
-function fillClassSelect(sel, allLabel){
+function normTerm(v){ const m = z2h(String(v ?? '')).match(/(\d{4})/); return m ? m[1] : ''; }
+const termLabel = t => t ? t + '期' : '期なし';
+const clsOf = (s, term) => (s && s.classes && s.classes[term]) || '';
+function latestCls(s){
+  const t = Object.keys((s && s.classes) || {}).filter(k => s.classes[k]).sort().pop();
+  return t ? `${s.classes[t]}・${t}期` : 'クラスなし';
+}
+function allTerms(){
+  const set = new Set([termNow()]);
+  S.students.forEach(s => Object.keys(s.classes || {}).forEach(t => t && set.add(t)));
+  Object.values(S.exams).forEach(e => e.term && set.add(e.term));
+  return [...set].sort().reverse();
+}
+function classesIn(term){
+  return [...new Set(S.students.map(s => clsOf(s, term)).filter(Boolean))].sort();
+}
+function fillClassSelect(sel, allLabel, term){
   const v = sel.value;
-  sel.innerHTML = `<option value="">${allLabel}</option>` + classes().map(c => `<option>${esc(c)}</option>`).join('');
+  sel.innerHTML = `<option value="">${allLabel}</option>` + classesIn(term).map(c => `<option>${esc(c)}</option>`).join('');
+  if([...sel.options].some(o => o.value === v)) sel.value = v;
+}
+function fillTermSelect(sel){
+  const v = sel.value || termNow();
+  sel.innerHTML = allTerms().map(t => `<option value="${t}">${t}期</option>`).join('');
   if([...sel.options].some(o => o.value === v)) sel.value = v;
 }
 $('stuTpl').onclick = () => {
-  const aoa = [['クラス','学籍番号','正式氏名（英字）','氏名']];
-  S.students.forEach(s => aoa.push([s.cls, s.id, s.nameEn, s.nameKana]));
+  const term = normTerm($('stuTerm').value);
+  if(!term){ showMsg($('stuMsg'), 'err', '①に期を4ケタの数字で入れてください（例：2610）。'); return; }
+  const aoa = [[term + '期','学籍番号','正式氏名（英字）','氏名']];
+  [...S.students].sort((a,b) => (clsOf(a,term) || '~').localeCompare(clsOf(b,term) || '~') || a.id.localeCompare(b.id))
+    .forEach(s => aoa.push([clsOf(s, term), s.id, s.nameEn, s.nameKana]));
   if(aoa.length === 1) aoa.push(['T1','B2504028','FAN YIXUAN','ハン イケン']);
-  saveXlsx('学生情報_入力用.xlsx', [{name:'学生情報', aoa, cols:[10,14,26,20], text:[1]}], $('stuMsg'));
+  saveXlsx('学生情報_' + term + '期.xlsx', [{name:'学生情報', aoa, cols:[10,14,26,20], text:[1]}], $('stuMsg'));
 };
 $('stuFile').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if(!f) return;
@@ -393,24 +428,33 @@ $('stuFile').onchange = async e => {
     let cEn = head.findIndex(v => v.includes('英字') || v.includes('正式'));
     let cKana = head.findIndex((v,i) => i !== cEn && (v === '氏名' || v.includes('カナ') || v.includes('フリガナ')));
     if(cKana < 0) cKana = head.findIndex((v,i) => i !== cEn && v.includes('氏名'));
-    let cCls = head.findIndex(v => v.includes('クラス') || /期$/.test(v));
+    let cCls = head.findIndex(v => /\d{4}期/.test(v));
+    if(cCls < 0) cCls = head.findIndex(v => v.includes('クラス') || /期$/.test(v));
     if(cCls < 0 && h.c > 0) cCls = h.c - 1;
+    // 期：見出しが「2610期」なら、その期。なければ①の期。
+    const term = (cCls >= 0 && normTerm(aoa[h.r][cCls])) || normTerm($('stuTerm').value);
+    if(cCls >= 0 && !term){ showMsg($('stuMsg'), 'err', 'どの期のクラスかわかりません。①に期を入れてから、もう一度アップロードしてください。'); return; }
     const rows = [];
     for(let r = h.r + 1; r < aoa.length; r++){
       const id = String(aoa[r][h.c] ?? '').trim(); if(!id) continue;
-      rows.push({ id, cls: cCls >= 0 ? String(aoa[r][cCls]).trim() : '',
+      rows.push({ id, cls: cCls >= 0 ? String(aoa[r][cCls]).trim() : null,
         nameEn: cEn >= 0 ? String(aoa[r][cEn]).trim() : '', nameKana: cKana >= 0 ? String(aoa[r][cKana]).trim() : '' });
     }
     if(!rows.length){ showMsg($('stuMsg'), 'err', '学生のデータがありませんでした。'); return; }
     let added = 0, updated = 0;
-    if($('stuMode').value === 'replace'){ S.students = rows; added = rows.length; }
-    else rows.forEach(r => {
-      const i = S.students.findIndex(s => norm(s.id) === norm(r.id));
-      if(i >= 0){ S.students[i] = r; updated++; } else { S.students.push(r); added++; }
+    if($('stuMode').value === 'replace' && term) S.students.forEach(s => { if(s.classes) delete s.classes[term]; });
+    rows.forEach(r => {
+      let s = S.students.find(x => norm(x.id) === norm(r.id));
+      if(s){ updated++; } else { s = {id: r.id, nameEn:'', nameKana:'', classes:{}}; S.students.push(s); added++; }
+      if(r.nameEn) s.nameEn = r.nameEn;
+      if(r.nameKana) s.nameKana = r.nameKana;
+      s.classes = s.classes || {};
+      if(r.cls !== null && term){ if(r.cls) s.classes[term] = r.cls; else delete s.classes[term]; }
     });
+    if(term){ $('stuTerm').value = term; $('stuViewTerm').value = term; }
     await saveStudents(); renderStudents();
     const dups = dupGroups();
-    let text = `読み込みました：新しく ${added}人、更新 ${updated}人（合計 ${S.students.length}人）`;
+    let text = `読み込みました：新しく ${added}人、更新 ${updated}人（合計 ${S.students.length}人）` + (term && cCls >= 0 ? `\n${term}期のクラスとして登録しました。` : '');
     if(dups.length){
       text += `\n\n⚠ 学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）\n` + dupText(dups);
       showMsg($('stuMsg'), 'warn', text);
@@ -420,34 +464,41 @@ $('stuFile').onchange = async e => {
 };
 armDanger($('stuClear'), async () => { S.students = []; await saveStudents(); renderStudents(); showMsg($('stuMsg'),'ok','学生情報をすべて削除しました。'); });
 $('stuClassFilter').onchange = renderStudents;
+$('stuViewTerm').onchange = renderStudents;
 function dupGroups(){
   const map = {};
   S.students.forEach(s => { const d = digits(s.id); if(d) (map[d] = map[d] || []).push(s); });
   return Object.entries(map).filter(([d, list]) => list.length > 1).map(([d, list]) => ({d, list}));
 }
 function dupText(dups){
-  return dups.map(g => `・${g.d}：` + g.list.map(s => `${s.id}（${s.cls || 'クラスなし'}）${s.nameEn || s.nameKana || ''}`).join(' ／ ')).join('\n');
+  return dups.map(g => `・${g.d}：` + g.list.map(s => `${s.id}（${latestCls(s)}）${s.nameEn || s.nameKana || ''}`).join(' ／ ')).join('\n');
 }
 function showDupDialog(dups){
   $('dupBody').innerHTML = dups.map(g => `<div class="dup-group"><b>${esc(g.d)}</b><table><tbody>` +
-    g.list.map(s => `<tr><td>${esc(s.cls)}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td></tr>`).join('') +
+    g.list.map(s => `<tr><td>${esc(latestCls(s))}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td></tr>`).join('') +
     '</tbody></table></div>').join('');
   $('dupCount').textContent = dups.length;
   $('dupDialog').hidden = false;
 }
 $('dupClose').onclick = () => { $('dupDialog').hidden = true; };
 function renderStudents(){
-  fillClassSelect($('stuClassFilter'), 'すべてのクラス');
+  if(!$('stuTerm').value) $('stuTerm').value = termNow();
+  $('termList').innerHTML = allTerms().map(t => `<option value="${t}">`).join('');
+  fillTermSelect($('stuViewTerm'));
+  const vt = $('stuViewTerm').value;
+  fillClassSelect($('stuClassFilter'), 'すべてのクラス', vt);
   const dups = dupGroups();
   const dupDigits = new Set(dups.map(g => g.d));
   $('stuDupBanner').hidden = !dups.length;
   if(dups.length) $('stuDupBanner').innerHTML = `⚠ 学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）。表の<span class="dup-mark">黄色の行</span>を確認してください。 <button class="btn" id="dupShow">くわしく見る</button>`;
   if(dups.length) $('dupShow').onclick = () => showDupDialog(dups);
   const f = $('stuClassFilter').value;
-  const list = S.students.filter(s => !f || s.cls === f);
+  const list = S.students.filter(s => !f || clsOf(s, vt) === f)
+    .sort((a,b) => (clsOf(a,vt) || '~').localeCompare(clsOf(b,vt) || '~') || a.id.localeCompare(b.id));
+  const hist = s => Object.keys(s.classes || {}).filter(t => t !== vt && s.classes[t]).sort().reverse().map(t => `${t}期 ${s.classes[t]}`).join('、');
   $('stuCount').textContent = S.students.length + '人';
-  $('stuTable').innerHTML = list.length ? `<thead><tr><th>クラス</th><th>学籍番号</th><th>正式氏名（英字）</th><th>氏名</th></tr></thead><tbody>` +
-    list.map(s => `<tr${dupDigits.has(digits(s.id)) ? ' class="dup-row"' : ''}><td>${esc(s.cls)}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td></tr>`).join('') + '</tbody>'
+  $('stuTable').innerHTML = list.length ? `<thead><tr><th>クラス（${vt}期）</th><th>学籍番号</th><th>正式氏名（英字）</th><th>氏名</th><th>ほかの期のクラス</th></tr></thead><tbody>` +
+    list.map(s => `<tr${dupDigits.has(digits(s.id)) ? ' class="dup-row"' : ''}><td>${esc(clsOf(s, vt)) || '<span class="muted">—</span>'}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td><td class="small muted">${esc(hist(s))}</td></tr>`).join('') + '</tbody>'
     : '<tbody><tr><td class="empty">まだ登録されていません。</td></tr></tbody>';
 }
 
@@ -461,11 +512,12 @@ function catsOf(ex){
 }
 function renderExamChips(){
   const list = examList();
-  $('examChips').innerHTML = list.map(ex => `<button class="exam-chip ${ex.id===S.curExam?'active':''}" data-id="${ex.id}">${esc(ex.name)}</button>`).join('') +
+  $('examChips').innerHTML = list.map(ex => `<button class="exam-chip ${ex.id===S.curExam?'active':''}" data-id="${ex.id}">${esc(ex.name)}${ex.term ? ` <span class="small" style="opacity:.75">${ex.term}期</span>` : ''}</button>`).join('') +
     `<button class="exam-chip ${!S.curExam?'active':''}" data-id="">＋ 新しい試験</button>`;
   $('examChips').querySelectorAll('button').forEach(b => b.onclick = () => { S.curExam = b.dataset.id || null; renderAll(); });
   const ex = curExam();
   $('examName').value = ex ? ex.name : '';
+  $('examTerm').value = ex ? (ex.term || '') : termNow();
   $('examRename').disabled = !ex; $('examDelete').disabled = !ex;
   ['markExam','resExam'].forEach(id => {
     const sel = $(id);
@@ -479,7 +531,8 @@ function exampleQs(){
 $('qTpl').onclick = () => {
   const ex = curExam();
   const name = $('examName').value.trim() || (ex && ex.name) || '';
-  const aoa = [['試験名', name], [], ['設問番号','設問分類','正答','配点']];
+  const term = normTerm($('examTerm').value) || (ex && ex.term) || '';
+  const aoa = [['試験名', name], ['期', term], [], ['設問番号','設問分類','正答','配点']];
   (ex && ex.questions.length ? ex.questions.map(q => [q.no, q.cat, q.ans, q.pts]) : exampleQs()).forEach(r => aoa.push(r));
   saveXlsx('設問_' + (name || '入力用') + '.xlsx', [{name:'設問', aoa, cols:[10,18,8,8], text:[0,2]}], $('qMsg'));
 };
@@ -497,6 +550,8 @@ $('qFile').onchange = async e => {
     let fileName = '';
     const t = findHeader(aoa.slice(0, h.r + 1), '試験名');
     if(t) fileName = String(aoa[t.r][t.c + 1] ?? '').trim();
+    let fileTerm = '';
+    for(let r = 0; r < h.r; r++){ const c = aoa[r].findIndex(v => norm(v) === '期'); if(c >= 0){ fileTerm = normTerm(aoa[r][c + 1]); break; } }
     const qs = []; const probs = [];
     for(let r = h.r + 1; r < aoa.length; r++){
       const no = String(aoa[r][h.c] ?? '').trim(); if(!no) continue;
@@ -509,13 +564,14 @@ $('qFile').onchange = async e => {
     if(!qs.length){ showMsg($('qMsg'), 'err', '設問のデータがありませんでした。'); return; }
     const name = $('examName').value.trim() || fileName;
     if(!name){ showMsg($('qMsg'), 'err', '試験名を入力してください（画面の①、またはエクセルの「試験名」欄）。'); return; }
+    const term = normTerm($('examTerm').value) || fileTerm || normTerm(name) || termNow();
     let ex = curExam();
-    if(!ex){ const id = 'e' + Date.now().toString(36); ex = S.exams[id] = {id, name, questions:[], marks:{}, created:Date.now()}; S.curExam = id; }
+    if(!ex){ const id = 'e' + Date.now().toString(36); ex = S.exams[id] = {id, name, term, questions:[], marks:{}, created:Date.now()}; S.curExam = id; }
     const changedCount = ex.questions.length && ex.questions.length !== qs.length;
-    ex.name = name; ex.questions = qs;
+    ex.name = name; ex.term = term; ex.questions = qs;
     await saveExam(ex); renderAll();
     const tot = qs.reduce((a,q) => a + q.pts, 0);
-    let text = `「${name}」に ${qs.length}問（満点 ${tot}点）を登録しました。`;
+    let text = `「${name}」（${term}期）に ${qs.length}問（満点 ${tot}点）を登録しました。`;
     if(changedCount && Object.keys(ex.marks).length) text += '\n※ 設問の数が変わりました。マークデータを読み込み直してください。';
     if(probs.length) text += '\n' + probs.slice(0, 10).join('\n');
     showMsg($('qMsg'), probs.length || changedCount ? 'warn' : 'ok', text);
@@ -523,7 +579,9 @@ $('qFile').onchange = async e => {
 };
 $('examRename').onclick = async () => {
   const ex = curExam(); const n = $('examName').value.trim(); if(!ex || !n) return;
-  ex.name = n; await saveExam(ex); renderAll(); showMsg($('qMsg'), 'ok', '試験名を保存しました。');
+  const t = normTerm($('examTerm').value);
+  if(!t){ showMsg($('qMsg'), 'err', '期を4ケタの数字で入れてください（例：2610）。'); return; }
+  ex.name = n; ex.term = t; await saveExam(ex); renderAll(); showMsg($('qMsg'), 'ok', '試験名と期を保存しました。');
 };
 armDanger($('examDelete'), async () => {
   const ex = curExam(); if(!ex) return;
@@ -549,7 +607,8 @@ $('mTpl').onclick = () => {
   if(!ex || !ex.questions.length){ showMsg($('mMsg'), 'err', '先に「2 試験・設問」で設問を登録してください。'); return; }
   const cls = $('markTplClass').value;
   const aoa = [['学籍番号', ...ex.questions.map(q => q.no)]];
-  S.students.filter(s => !cls || s.cls === cls).forEach(s => {
+  S.students.filter(s => cls ? clsOf(s, ex.term) === cls : (!ex.term || clsOf(s, ex.term)))
+    .sort((a,b) => clsOf(a,ex.term).localeCompare(clsOf(b,ex.term)) || a.id.localeCompare(b.id)).forEach(s => {
     const m = ex.marks[s.id]; aoa.push([s.id, ...ex.questions.map((q,i) => m ? (m[i] ?? '') : '')]);
   });
   saveXlsx('マーク_' + ex.name + (cls ? '_' + cls : '') + '.xlsx', [{name:'マーク', aoa, cols:[12, ...ex.questions.map(() => 5)], text:[0]}], $('mMsg'));
@@ -591,13 +650,16 @@ $('mFile').onchange = async e => {
 };
 armDanger($('mClear'), async () => { const ex = markExam(); if(!ex) return; ex.marks = {}; await saveExam(ex); renderMarks(); showMsg($('mMsg'),'ok','マークを削除しました。'); });
 function renderMarks(){
-  fillClassSelect($('markTplClass'), '全クラス');
   const ex = markExam();
+  fillClassSelect($('markTplClass'), ex && ex.term ? `${ex.term}期の全クラス` : '全クラス', ex && ex.term);
   const ids = ex ? Object.keys(ex.marks) : [];
   $('mCount').textContent = ids.length + '人';
   if(!ex || !ids.length){ $('mTable').innerHTML = '<tbody><tr><td class="empty">まだ読み込まれていません。</td></tr></tbody>'; return; }
-  $('mTable').innerHTML = '<thead><tr><th>学籍番号</th><th>氏名</th>' + ex.questions.map(q => `<th class="num">${esc(q.no)}</th>`).join('') + '</tr></thead><tbody>' +
-    ids.map(id => { const st = findStudent(id); return `<tr><td>${esc(id)}</td><td>${st ? esc(st.nameEn) : '<span class="ng-cell">未登録</span>'}</td>` +
+  const rows = ids.map(id => ({id, st: findStudent(id)}))
+    .sort((a,b) => clsOf(a.st, ex.term).localeCompare(clsOf(b.st, ex.term)) || a.id.localeCompare(b.id));
+  $('mTable').innerHTML = '<thead><tr><th>学籍番号</th><th>クラス</th><th>氏名（英字）</th><th>氏名（カナ）</th>' + ex.questions.map(q => `<th class="num">${esc(q.no)}</th>`).join('') + '</tr></thead><tbody>' +
+    rows.map(({id, st}) => { return `<tr><td>${esc(id)}</td>` +
+      (st ? `<td>${esc(clsOf(st, ex.term))}</td><td>${esc(st.nameEn)}</td><td>${esc(st.nameKana)}</td>` : '<td></td><td colspan="2"><span class="ng-cell">学生情報に未登録</span></td>') +
       ex.questions.map((q,i) => `<td class="num">${esc(ex.marks[id][i] ?? '')}</td>`).join('') + '</tr>'; }).join('') + '</tbody>';
 }
 
@@ -613,8 +675,8 @@ function scoreAll(ex){
   const catMax = Object.fromEntries(cats.map(c => [c, ex.questions.filter(q => q.cat === c).reduce((a,q) => a + q.pts, 0)]));
   const max = ex.questions.reduce((a,q) => a + q.pts, 0);
   const rows = Object.entries(ex.marks).map(([id, m]) => {
-    const st = findStudent(id) || {id, cls:'', nameEn:'（未登録）', nameKana:''};
-    const r = {id: st.id, cls: st.cls, nameEn: st.nameEn, nameKana: st.nameKana, total: 0, cat:{}, ok:[], mark:[]};
+    const st = findStudent(id) || {id, classes:{}, nameEn:'（未登録）', nameKana:''};
+    const r = {id: st.id, cls: clsOf(st, ex.term), nameEn: st.nameEn, nameKana: st.nameKana, total: 0, cat:{}, ok:[], mark:[]};
     cats.forEach(c => r.cat[c] = 0);
     ex.questions.forEach((q,i) => {
       const ok = isCorrect(q, m[i]); r.ok.push(ok); r.mark.push(m[i] ?? '');
@@ -645,7 +707,7 @@ function buildView(){
   sorted.forEach(r => r.rank = 1 + sorted.filter(x => x.total > r.total).length);
   const cols = [];
   if(o.has('rank')) cols.push({key:'rank', label:'順位', num:true, get:r => r.rank});
-  cols.push({key:'cls', label:'クラス', get:r => r.cls});
+  cols.push({key:'cls', label: ex.term ? `クラス（${ex.term}期）` : 'クラス', get:r => r.cls});
   cols.push({key:'id', label:'学籍番号', get:r => r.id});
   if(o.has('nameEn')) cols.push({key:'nameEn', label:'正式氏名（英字）', get:r => r.nameEn});
   if(o.has('nameKana')) cols.push({key:'nameKana', label:'氏名', get:r => r.nameKana});
@@ -668,7 +730,8 @@ function buildView(){
 }
 const fmt = (c, v) => c.pct ? (Math.round(v * 10) / 10).toFixed(1) : v;
 function renderResults(){
-  fillClassSelect($('resClass'), '全クラス');
+  const rex = S.exams[$('resExam').value];
+  fillClassSelect($('resClass'), '全クラス', rex && rex.term);
   const v = buildView();
   if(!v){ $('resStats').innerHTML=''; $('resTable').innerHTML = '<tbody><tr><td class="empty">試験と設問を登録し、マークデータを読み込むと、ここに結果が出ます。</td></tr></tbody>'; return; }
   const {sc, cols, rows} = v;
