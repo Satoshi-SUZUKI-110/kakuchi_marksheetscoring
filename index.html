@@ -184,6 +184,12 @@ input.tp-y.bad{border-color:var(--err);background:var(--err-weak)}
 .tablewrap table{width:auto}
 .tablewrap th,.tablewrap td{padding:8px 16px}
 .tablewrap td.empty{min-width:420px}
+/* 1行ずつ色を変える */
+.tablewrap tbody tr:nth-child(odd) td{background:#fff}
+.tablewrap tbody tr:nth-child(even) td{background:#eef2f8}
+.tablewrap tbody tr.dup-row td{background:#fff3c4}
+.tablewrap tbody tr:hover td{background:#dfe8fa}
+.tablewrap tbody td.empty{background:#fff !important}
 #qTable td:nth-child(1),#qTable th:nth-child(1),#qTable td:nth-child(3),#qTable th:nth-child(3){text-align:center}
 .nowrap{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 /* 上のバー：うすいグレー */
