@@ -204,6 +204,12 @@ header h1{margin-right:auto !important}
 #storeStatus{background:#fff;border:1px solid #d3d8e0;border-radius:20px;padding:3px 12px}
 #storeStatus:empty{display:none}
 .guide{padding-top:20px}
+/* カード：選んでいるものだけ緑 */
+.g-item.done{border-color:var(--line);background:#fff}
+.g-item.done .g-s{color:var(--sub)}
+.g-item.cur,.g-item.cur.done,.g-item.cur.next{border-color:#2e9d5b;background:#eaf7ef;box-shadow:inset 0 -5px 0 #2e9d5b}
+.g-item.cur .g-t{color:#17663a}
+.g-item.cur .g-s{color:#1f7a45}
 </style>
 </head>
 <body>
@@ -1023,14 +1029,14 @@ function renderGuide(){
   const nMarks = ex ? Object.keys(ex.marks).length : 0;
   const items = [
     {tab:'students', t:'① 学生を登録', done:S.students.length > 0, s:S.students.length ? `✓ ${S.students.length}人 登録済み` : 'まだ登録していません'},
-    {tab:'exams', t:'② 試験を登録', done:exams.length > 0, s:exams.length ? `✓ ${exams.length}件 登録済み` : 'まだ登録していません'},
+    {tab:'exams', t:'② 試験を登録', done:exams.length > 0, s:exams.length ? '' : 'まだ登録していません'},
     {tab:'marks', t:'③ マークを読み込む', done:nMarks > 0, s:nMarks ? `✓ ${ex.name}：${nMarks}人分` : (ex ? `「${ex.name}」はまだです` : '試験の登録が先です')},
     {tab:'results', t:'④ 結果を見る', done:false, s:nMarks ? '結果を見られます' : 'マークを読み込むと見られます'},
   ];
   const next = items.findIndex(i => !i.done);
   const cur = (document.querySelector('#tabs button.active') || {}).dataset;
   $('guide').innerHTML = items.map((it, i) => `<button class="g-item ${it.done ? 'done' : ''} ${i === next && i < 3 ? 'next' : ''} ${cur && cur.tab === it.tab ? 'cur' : ''}" data-tab="${it.tab}">
-    <span class="g-t">${it.t}</span><span class="g-s">${i === next && i < 3 ? '👉 次はここ　' : ''}${esc(it.s)}</span></button>`).join('');
+    <span class="g-t">${it.t}</span><span class="g-s">${i === next && i < 3 ? '👉 次はここ　' : ''}${esc(it.s) || '&nbsp;'}</span></button>`).join('');
   $('guide').querySelectorAll('button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 }
 /* ----- 文字の大きさ ----- */
