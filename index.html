@@ -90,6 +90,78 @@ tr.dup-row td{background:#fff6cc}
 .dup-group{border:1px solid #f0d9a8;background:#fffaf0;border-radius:8px;padding:8px 12px;margin:10px 0}
 .dup-group table{margin-top:4px}
 .dup-group td{border-bottom:none;padding:2px 10px 2px 0}
+/* ===== 見やすさの工夫（大きな文字・大きなボタン） ===== */
+:root{ --sub:#4a5262; --line:#d6dbe3; }
+body{font-size:16px;line-height:1.7}
+header{padding:14px 28px}
+header h1{font-size:20px}
+#storeStatus{font-size:14px}
+.small{font-size:14px}
+nav{padding:0 20px;gap:6px}
+nav button{font-size:16px;padding:14px 18px}
+nav .num{width:26px;height:26px;line-height:26px;font-size:14px}
+main{padding:22px 28px}
+.panel{padding:22px 26px;border-radius:12px}
+.panel h2{font-size:19px;margin-bottom:6px}
+.panel p.lead{font-size:15px;color:var(--sub)}
+.step{border:2px dashed var(--line);border-radius:10px;padding:14px 16px}
+.step b{font-size:16px}
+button.btn,label.btn{font-size:15px;padding:10px 18px;min-height:44px;border-radius:9px;border-width:2px}
+input[type=text],select{font-size:15px;padding:9px 12px;min-height:44px;border-width:2px;border-radius:9px}
+.msg{font-size:15px;padding:12px 16px;border-radius:9px;line-height:1.8}
+table{font-size:14.5px}
+th,td{padding:9px 12px}
+.badge{font-size:14px;padding:2px 10px}
+.stat .k{font-size:13.5px}
+.stat .v{font-size:21px}
+.opts label{font-size:15px}
+.opts input{width:18px;height:18px}
+.exam-chip{font-size:15px;padding:8px 18px;border-width:2px}
+.login-box input[type=password]{font-size:17px;padding:12px 14px;border-width:2px}
+.login-box button{font-size:17px;min-height:50px}
+.login-box input[type=checkbox]{width:18px;height:18px}
+/* 文字の大きさ・使い方 */
+.tools{display:flex;align-items:center;gap:6px}
+.tools .lbl{font-size:13px;color:var(--sub)}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:none;background:#fff;padding:6px 12px;font:inherit;cursor:pointer;color:var(--ink);min-height:40px}
+.seg button + button{border-left:2px solid var(--line)}
+.seg button.on{background:var(--accent);color:#fff}
+/* 次にやること */
+.guide{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 28px 0;max-width:1400px;margin:0 auto}
+.g-item{background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:2px}
+.g-item:hover{border-color:var(--accent)}
+.g-item .g-t{font-weight:700;font-size:15.5px}
+.g-item .g-s{font-size:14px;color:var(--sub)}
+.g-item.done{border-color:#b9dfc8;background:#f3fbf6}
+.g-item.done .g-s{color:var(--ok)}
+.g-item.next{border-color:var(--accent);background:var(--accent-weak);box-shadow:0 0 0 3px rgba(36,87,197,.15)}
+.g-item.next .g-s{color:var(--accent);font-weight:700}
+.g-item.cur{border-color:var(--accent);box-shadow:inset 0 -5px 0 var(--accent);background:#fff}
+.g-item.cur.done{background:#f3fbf6}
+nav#tabs{display:none}
+#stuDupBanner[hidden]{display:none !important}
+.guide{padding-top:18px}
+@media (max-width:760px){ .guide{grid-template-columns:repeat(2,1fr)} }
+/* ファイルを入れる場所 */
+label.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;
+  border:2px dashed var(--accent);background:#f7f9fe;border-radius:12px;padding:18px 14px;cursor:pointer;color:var(--accent);font-weight:700;font-size:16px;min-height:96px}
+label.drop:hover,label.drop.over{background:var(--accent-weak)}
+label.drop .sub{font-weight:400;font-size:14px;color:var(--sub)}
+label.drop .ico{font-size:26px;line-height:1}
+/* 削除などの注意が必要な操作 */
+details.danger-zone{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+details.danger-zone summary{cursor:pointer;color:var(--sub);font-size:14px;list-style:none;display:inline-flex;align-items:center;gap:6px}
+details.danger-zone summary::before{content:"▸";transition:transform .15s}
+details.danger-zone[open] summary::before{transform:rotate(90deg)}
+details.danger-zone .row{margin-top:10px}
+/* 結果の表示パターン */
+.presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.presets .lbl{font-size:14px;color:var(--sub);margin-right:4px}
+/* 使い方 */
+.help h3{color:var(--ink) !important}
+.help ol{list-style:none;padding-left:0;margin:10px 0}
+.help li{margin:8px 0;font-size:15px}
 </style>
 </head>
 <body>
@@ -107,15 +179,19 @@ tr.dup-row td{background:#fff6cc}
 <header>
   <h1>格致教育日本語学校 試験結果集計システム</h1>
   <span id="storeStatus"></span>
+  <div class="tools"><span class="lbl">文字の大きさ</span>
+    <span class="seg" id="zoomSeg"><button data-z="1">標準</button><button data-z="1.15">大</button><button data-z="1.3">特大</button></span></div>
+  <button class="btn" id="helpBtn">？ 使い方</button>
   <button class="btn" id="reloadBtn" title="ほかの先生の変更を読み込みます">↻ 最新にする</button>
   <button class="btn" id="logoutBtn">ログアウト</button>
 </header>
 <nav id="tabs">
-  <button data-tab="students" class="active"><span class="num">1</span>学生情報</button>
-  <button data-tab="exams"><span class="num">2</span>試験・設問</button>
-  <button data-tab="marks"><span class="num">3</span>マークデータ</button>
-  <button data-tab="results"><span class="num">4</span>試験結果</button>
+  <button data-tab="students" class="active"><span class="num">1</span>学生を登録</button>
+  <button data-tab="exams"><span class="num">2</span>試験を登録</button>
+  <button data-tab="marks"><span class="num">3</span>マークを読み込む</button>
+  <button data-tab="results"><span class="num">4</span>結果を見る</button>
 </nav>
+<div class="guide" id="guide"></div>
 <main>
 
 <!-- 1 学生情報 -->
@@ -127,25 +203,26 @@ tr.dup-row td{background:#fff6cc}
       <div class="step"><b>① 期を選ぶ</b>
         <div class="row"><input type="text" id="stuTerm" list="termList" size="6" placeholder="2610"> 期</div>
         <div class="small muted" style="margin-top:6px">4月期＝◯◯04、7月期＝◯◯07、10月期＝◯◯10、1月期＝◯◯01（例：2026年10月期＝2610）</div></div>
-      <div class="step"><b>② 入力用エクセルを出力</b>
-        <button class="btn" id="stuTpl">⬇ 学生情報エクセル</button>
+      <div class="step"><b>② 入力用エクセルをダウンロード</b>
+        <button class="btn" id="stuTpl">⬇ 学生情報のエクセル</button>
         <div class="small muted" style="margin-top:6px">登録済みの学生と、選んだ期のクラスが入った状態で出力されます。新しい期のときは、クラスの列だけ入力してください。</div></div>
-      <div class="step"><b>③ 入力したエクセルをアップロード</b>
+      <div class="step"><b>③ 入力したエクセルを読み込む</b>
         <div class="row">
           <select id="stuMode"><option value="merge">追加・更新（同じ学籍番号は上書き）</option><option value="replace">この期のクラスを全部入れ替え</option></select>
-          <label class="btn primary">⬆ アップロード<input type="file" id="stuFile" accept=".xlsx,.xls,.csv"></label>
-        </div></div>
+        </div>
+        <div style="margin-top:10px"><label class="drop"><span class="ico">📄</span>エクセルをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ</span><input type="file" id="stuFile" accept=".xlsx,.xls,.csv"></label></div></div>
     </div>
     <div class="msg" id="stuMsg"></div>
   </div>
   <div class="panel">
     <div class="row" style="justify-content:space-between">
       <h2>登録済みの学生 <span class="badge" id="stuCount">0人</span></h2>
-      <div class="row"><select id="stuViewTerm"></select><select id="stuClassFilter"></select>
-      <button class="btn danger" id="stuClear">全員削除</button></div>
+      <div class="row">表示する期：<select id="stuViewTerm"></select> クラス：<select id="stuClassFilter"></select></div>
     </div>
     <div class="msg warn" id="stuDupBanner" hidden style="margin-top:10px"></div>
     <div class="tablewrap" style="margin-top:10px"><table id="stuTable"></table></div>
+    <details class="danger-zone"><summary>削除する（注意）</summary>
+      <div class="row"><button class="btn danger" id="stuClear">学生情報を全部削除</button><span class="small muted">ボタンを2回押すと削除されます。元にもどせません。</span></div></details>
   </div>
 </section>
 
@@ -160,18 +237,19 @@ tr.dup-row td{background:#fff6cc}
         <input type="text" id="examName" placeholder="例：2610期 期末試験" style="width:100%">
         <div class="row" style="margin-top:6px"><input type="text" id="examTerm" list="termList" size="6" placeholder="2610"> 期の試験</div>
         <div class="small muted" style="margin-top:6px">結果のクラスは、この期のクラスで出します。エクセルの「試験名」「期」欄に書いてもOKです。</div></div>
-      <div class="step"><b>② 入力用エクセルを出力</b>
-        <button class="btn" id="qTpl">⬇ 設問エクセル</button>
+      <div class="step"><b>② 入力用エクセルをダウンロード</b>
+        <button class="btn" id="qTpl">⬇ 設問のエクセル</button>
         <div class="small muted" style="margin-top:6px">選んでいる試験の設問が入った状態で出力されます。</div></div>
-      <div class="step"><b>③ 入力したエクセルをアップロード</b>
-        <label class="btn primary">⬆ アップロード<input type="file" id="qFile" accept=".xlsx,.xls,.csv"></label>
+      <div class="step"><b>③ 入力したエクセルを読み込む</b>
+<label class="drop"><span class="ico">📄</span>エクセルをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ</span><input type="file" id="qFile" accept=".xlsx,.xls,.csv"></label>
         <div class="small muted" style="margin-top:6px">選んでいる試験の設問を入れ替えます。</div></div>
     </div>
     <div class="row" style="margin-top:12px">
-      <button class="btn" id="examRename">試験名・期を保存</button>
-      <button class="btn danger" id="examDelete">この試験を削除</button>
+      <button class="btn" id="examRename">💾 試験名・期を保存</button>
     </div>
     <div class="msg" id="qMsg"></div>
+    <details class="danger-zone"><summary>削除する（注意）</summary>
+      <div class="row"><button class="btn danger" id="examDelete">この試験を削除</button><span class="small muted">設問とマークも消えます。2回押すと削除されます。</span></div></details>
   </div>
   <div class="panel">
     <h2>設問一覧</h2>
@@ -187,23 +265,24 @@ tr.dup-row td{background:#fff6cc}
     <p class="lead">A列に学籍番号、B列から設問の順番にマーク番号を入れたデータを読み込みます。1行目が見出し（学籍番号）でも、見出しがなくても読めます。</p>
     <div class="row" style="margin-bottom:12px">試験：<select id="markExam"></select></div>
     <div class="steps">
-      <div class="step"><b>① 入力用エクセルを出力</b>
-        <div class="row"><select id="markTplClass"></select><button class="btn" id="mTpl">⬇ マークエクセル</button></div>
+      <div class="step"><b>① 入力用エクセルをダウンロード</b>
+        <div class="row"><select id="markTplClass"></select><button class="btn" id="mTpl">⬇ マークのエクセル</button></div>
         <div class="small muted" style="margin-top:6px">学籍番号と設問番号が入った状態で出力されます。</div></div>
-      <div class="step"><b>② 入力したエクセルをアップロード</b>
+      <div class="step"><b>② 入力したエクセルを読み込む</b>
         <div class="row">
           <select id="markMode"><option value="merge">追加・更新</option><option value="replace">全部入れ替え</option></select>
-          <label class="btn primary">⬆ アップロード<input type="file" id="mFile" accept=".xlsx,.xls,.csv"></label>
-        </div></div>
+        </div>
+        <div style="margin-top:10px"><label class="drop"><span class="ico">📄</span>エクセルをここにドラッグ<span class="sub">または ここをクリックして ファイルを選ぶ</span><input type="file" id="mFile" accept=".xlsx,.xls,.csv"></label></div></div>
     </div>
     <div class="msg" id="mMsg"></div>
   </div>
   <div class="panel">
     <div class="row" style="justify-content:space-between">
       <h2>読み込み済みのマーク <span class="badge" id="mCount">0人</span></h2>
-      <button class="btn danger" id="mClear">この試験のマークを全部削除</button>
     </div>
     <div class="tablewrap" style="margin-top:10px"><table id="mTable"></table></div>
+    <details class="danger-zone"><summary>削除する（注意）</summary>
+      <div class="row"><button class="btn danger" id="mClear">この試験のマークを全部削除</button><span class="small muted">2回押すと削除されます。</span></div></details>
   </div>
 </section>
 
@@ -213,8 +292,12 @@ tr.dup-row td{background:#fff6cc}
     <div class="row" style="justify-content:space-between">
       <div class="row">試験：<select id="resExam"></select>
         クラス：<select id="resClass"></select></div>
-      <button class="btn primary" id="resExport">⬇ 表示中の結果をエクセルで出力</button>
+      <button class="btn primary" id="resExport">⬇ この表をエクセルで保存</button>
     </div>
+    <div class="presets"><span class="lbl">表示のパターン：</span>
+      <button class="btn" data-preset="simple">かんたん（合計だけ）</button>
+      <button class="btn" data-preset="cat">分類別もくわしく</button>
+      <button class="btn" data-preset="q">1問ずつの○×も</button></div>
     <div class="opts" id="resOpts">
       <label><input type="checkbox" value="rank" checked>順位</label>
       <label><input type="checkbox" value="total" checked>合計得点</label>
@@ -227,13 +310,27 @@ tr.dup-row td{background:#fff6cc}
       <label><input type="checkbox" value="nameKana" checked>氏名（カナ）</label>
     </div>
     <div class="stats" id="resStats"></div>
-    <div class="small muted">見出しをクリックすると並べ替えができます（もう一度クリックで逆順）。</div>
+    <div class="small muted">💡 表の見出し（いちばん上の行）をクリックすると、その順番に並べ替えます。もう一度クリックすると逆の順番になります。</div>
     <div class="msg" id="resMsg"></div>
     <div class="tablewrap" style="margin-top:8px"><table id="resTable"></table></div>
   </div>
 </section>
 </main>
 <datalist id="termList"></datalist>
+</div>
+<div class="overlay" id="helpDialog" hidden>
+  <div class="dialog help" role="dialog" aria-labelledby="helpTitle">
+    <h3 id="helpTitle">使い方（4つのステップ）</h3>
+    <ol>
+      <li><b>① 学生を登録</b>：学生のエクセル（学籍番号・氏名・クラス）を読み込みます。新しい期になったら、クラスだけ入れて読み込みます。</li>
+      <li><b>② 試験を登録</b>：「＋新しい試験」を押して、試験名と期を入れます。設問のエクセル（設問番号・分類・正答・配点）を読み込みます。</li>
+      <li><b>③ マークを読み込む</b>：試験を選んで、らく点マーク君などで作ったマークのエクセルを読み込みます。</li>
+      <li><b>④ 結果を見る</b>：試験とクラスを選ぶと、結果が出ます。「この表をエクセルで保存」で保存できます。</li>
+    </ol>
+    <div class="small muted">画面の上の4つの四角で、どこまで終わったかがわかります。青く光っているところが「次にやること」です。<br>
+    文字が小さいときは、右上の「文字の大きさ」で「大」「特大」を選んでください。</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="helpClose">閉じる</button></div>
+  </div>
 </div>
 <div class="overlay" id="dupDialog" hidden>
   <div class="dialog" role="alertdialog" aria-labelledby="dupTitle">
@@ -366,7 +463,11 @@ async function saveXlsx(filename, sheets, msgEl){
     showMsg(msgEl, 'err', 'ファイルを出力できませんでした：' + e.message);
   }
 }
-function showMsg(el, type, text){ el.className = 'msg ' + type; el.textContent = text; }
+function showMsg(el, type, text){
+  const icon = {ok:'✅ ', warn:'⚠️ ', err:'❌ '}[type] || '';
+  el.className = 'msg ' + type; el.textContent = icon + text;
+  try{ el.scrollIntoView({block:'nearest', behavior:'smooth'}); }catch(e){}
+}
 function findHeader(aoa, word){
   for(let r = 0; r < Math.min(aoa.length, 15); r++){
     const c = aoa[r].findIndex(v => norm(v) === norm(word) || norm(v).includes(norm(word)));
@@ -801,15 +902,65 @@ function armDanger(btn, action){
     clearTimeout(t); btn.classList.remove('arm'); btn.textContent = label; await action();
   };
 }
-document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x === b));
-  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
-  renderAll();
-});
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 function renderAll(){
   if(S.curExam && !S.exams[S.curExam]) S.curExam = null;
-  renderExamChips(); renderStudents(); renderQuestions(); renderMarks(); renderResults();
+  renderExamChips(); renderStudents(); renderQuestions(); renderMarks(); renderResults(); renderGuide();
 }
+/* ----- 次にやること ----- */
+function showTab(name){
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + name);
+  renderAll(); window.scrollTo({top:0, behavior:'smooth'});
+}
+function renderGuide(){
+  const exams = Object.values(S.exams).filter(e => e.questions.length);
+  const ex = S.exams[$('markExam').value];
+  const nMarks = ex ? Object.keys(ex.marks).length : 0;
+  const items = [
+    {tab:'students', t:'① 学生を登録', done:S.students.length > 0, s:S.students.length ? `✓ ${S.students.length}人 登録ずみ` : 'まだ登録していません'},
+    {tab:'exams', t:'② 試験を登録', done:exams.length > 0, s:exams.length ? `✓ ${exams.length}件 登録ずみ` : 'まだ登録していません'},
+    {tab:'marks', t:'③ マークを読み込む', done:nMarks > 0, s:nMarks ? `✓ ${ex.name}：${nMarks}人分` : (ex ? `「${ex.name}」はまだです` : '試験の登録が先です')},
+    {tab:'results', t:'④ 結果を見る', done:false, s:nMarks ? '結果を見られます' : 'マークを読み込むと見られます'},
+  ];
+  const next = items.findIndex(i => !i.done);
+  const cur = (document.querySelector('#tabs button.active') || {}).dataset;
+  $('guide').innerHTML = items.map((it, i) => `<button class="g-item ${it.done ? 'done' : ''} ${i === next && i < 3 ? 'next' : ''} ${cur && cur.tab === it.tab ? 'cur' : ''}" data-tab="${it.tab}">
+    <span class="g-t">${it.t}</span><span class="g-s">${i === next && i < 3 ? '👉 次はここ　' : ''}${esc(it.s)}</span></button>`).join('');
+  $('guide').querySelectorAll('button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+}
+/* ----- 文字の大きさ ----- */
+function setZoom(z){
+  document.body.style.zoom = z;
+  document.querySelectorAll('#zoomSeg button').forEach(b => b.classList.toggle('on', b.dataset.z === String(z)));
+  try{ localStorage.setItem('exam-system-zoom', String(z)); }catch(e){}
+}
+document.querySelectorAll('#zoomSeg button').forEach(b => b.onclick = () => setZoom(b.dataset.z));
+try{ setZoom(localStorage.getItem('exam-system-zoom') || '1'); }catch(e){ setZoom('1'); }
+/* ----- 使い方 ----- */
+$('helpBtn').onclick = () => { $('helpDialog').hidden = false; };
+$('helpClose').onclick = () => { $('helpDialog').hidden = true; };
+/* ----- ドラッグでファイルを入れる ----- */
+document.querySelectorAll('label.drop').forEach(lb => {
+  const input = lb.querySelector('input[type=file]');
+  ['dragenter','dragover'].forEach(ev => lb.addEventListener(ev, e => { e.preventDefault(); lb.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev => lb.addEventListener(ev, e => { e.preventDefault(); lb.classList.remove('over'); }));
+  lb.addEventListener('drop', e => {
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if(files && files.length && input.onchange) input.onchange({target:{files, value:''}});
+  });
+});
+/* ----- 結果の表示パターン ----- */
+const PRESETS = {
+  simple: ['rank','total','rate','nameEn','nameKana'],
+  cat: ['rank','total','rate','catRaw','catRate','nameEn','nameKana'],
+  q: ['rank','total','rate','catRaw','qOk','nameEn','nameKana'],
+};
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => {
+  const on = new Set(PRESETS[b.dataset.preset]);
+  $('resOpts').querySelectorAll('input').forEach(i => i.checked = on.has(i.value));
+  renderResults();
+});
 init();
 </script>
 </body>
