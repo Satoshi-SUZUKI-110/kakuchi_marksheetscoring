@@ -163,6 +163,7 @@ details.danger-zone .row{margin-top:10px}
 .help ol{list-style:none;padding-left:0;margin:10px 0}
 .help li{margin:8px 0;font-size:15px}
 .with-help{display:flex;align-items:center;gap:8px}
+.h2-note{font-size:16px;font-weight:400;color:var(--sub);margin-left:4px}
 button.qhelp{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);background:#fff;color:var(--accent);
   font:700 15px/1 "Noto Sans JP",sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
 button.qhelp:hover,button.qhelp.on{background:var(--accent);color:#fff}
@@ -238,7 +239,7 @@ header h1{margin-right:auto !important}
 <!-- 1 学生情報 -->
 <section id="tab-students">
   <div class="panel">
-    <h2 class="with-help">学生情報の登録 <button type="button" class="qhelp" data-help="students" aria-label="説明を見る">?</button></h2>
+    <h2 class="with-help">学生情報の登録 <button type="button" class="qhelp" data-help="students" aria-label="説明を見る">?</button><span class="h2-note">登録済みの場合はスキップ</span></h2>
     <div class="steps">
       <div class="step"><b>① 期を選ぶ</b>
         <div class="row"><span class="termpick" data-for="stuTerm"><input type="number" class="tp-y" min="2000" max="2099" step="1" inputmode="numeric" aria-label="年"> 年 <select class="tp-m"><option value="01">1月期</option><option value="04">4月期</option><option value="07">7月期</option><option value="10">10月期</option></select></span><input type="hidden" id="stuTerm"></div></div>
