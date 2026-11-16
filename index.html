@@ -317,6 +317,9 @@ input.bad{border-color:var(--err) !important;background:var(--err-weak)}
 .lg{display:inline-block;margin-left:12px;padding-left:16px;position:relative}
 .lg::before{content:"";position:absolute;left:0;top:50%;width:11px;height:7px;margin-top:-4px;border-radius:50%;border:2px solid}
 .lg.g::before{border-color:#2e9d5b}.lg.y::before{border-color:#f0a400}.lg.e::before{border-color:#2457c5}
+.rv-finish{background:#fff;border:2px solid #b9dfc8;border-radius:10px;padding:18px 20px}
+.rv-finish .big{font-size:22px;font-weight:700;color:var(--ok);margin-bottom:6px}
+.rv-now{margin:0 0 10px;font-size:15px}
 </style>
 </head>
 <body>
@@ -388,7 +391,7 @@ input.bad{border-color:var(--err) !important;background:var(--err-weak)}
 <section id="tab-exams" hidden>
   <div class="panel">
     <h2>試験と設問の登録</h2>
-    <p class="lead">試験名、設問番号、設問分類、正答、配点を登録します。正答が2つ以上あるときは「1|3」のように「|」でつないでください。</p>
+    <p class="lead">試験名、設問番号、設問分類、正答、配点を登録します。正答が2つ以上あるとき：<b>どちらか1つで正解</b>なら「1|3」、<b>両方ぬって正解</b>なら「2&amp;4」と書いてください。</p>
     <div class="row exam-pick">試験を選ぶ：<select id="examChips"></select></div>
     <div class="steps">
       <div class="step"><b>① 試験名</b>
@@ -550,7 +553,7 @@ input.bad{border-color:var(--err) !important;background:var(--err-weak)}
 <div class="overlay" id="sheetDialog" hidden>
   <div class="dialog sheet-dlg" role="dialog">
     <div class="row" style="justify-content:space-between"><h3 id="sheetTitle" style="color:var(--ink);margin:0"></h3><button class="btn" id="sheetClose">閉じる</button></div>
-    <div class="small muted" style="margin:6px 0 10px">マークをクリックすると、その答えに変わります（もう一度クリックで空欄）。<span class="lg g">緑＝自動で読み取り</span><span class="lg y">黄＝確認が必要</span><span class="lg e">青＝先生が直した</span></div>
+    <div class="small muted" style="margin:6px 0 10px">マークをクリックすると選ぶ、もう一度クリックすると元にもどります（2つ以上も選べます）。<span class="lg g">緑＝自動で読み取り</span><span class="lg y">黄＝確認が必要</span><span class="lg e">青＝先生が直した</span></div>
     <div class="sheet-view"><img id="sheetImg" alt=""><svg id="sheetSvg" viewBox="0 0 210 297"></svg></div>
   </div>
 </div>
@@ -1212,8 +1215,14 @@ function renderMarks(){
 function isCorrect(q, v){
   if(v === '' || v == null) return false;
   const n = x => { x = z2h(String(x).trim()); return /^\d+$/.test(x) ? String(Number(x)) : x.toUpperCase(); };
-  const answers = String(q.ans).split(/[|,、・\/]/).map(s => s.trim()).filter(Boolean).map(n);
-  return answers.includes(n(v));
+  const marks = [...new Set(String(v).split('|').map(n).filter(Boolean))].sort();
+  const key = String(q.ans).replace(/＆/g, '&');
+  if(key.includes('&')){   // 「2&4」＝ 2と4の両方をぬって正解
+    const need = [...new Set(key.split('&').map(n).filter(Boolean))].sort();
+    return marks.length === need.length && marks.every((m, i) => m === need[i]);
+  }
+  const answers = key.split(/[|,、・\/]/).map(s => s.trim()).filter(Boolean).map(n);   // 「1|3」＝ どちらか1つで正解
+  return marks.length === 1 && answers.includes(marks[0]);
 }
 function scoreAll(ex){
   const cats = catsOf(ex);
@@ -1855,7 +1864,7 @@ async function filesToCanvases(files, onProgress){
 async function omrRead(files){
   const ex = markExam();
   if(!ex || !ex.questions.length){ showMsg($('omrMsg'), 'err', '先に「② 試験を登録」で設問を登録して、上で試験を選んでください。'); return; }
-  OMR.sheets = []; OMR.items = []; OMR.cur = 0; OMR.exam = ex.id;
+  OMR.sheets = []; OMR.items = []; OMR.cur = 0; OMR.exam = ex.id; OMR.finished = false;
   $('omrResult').hidden = true; $('omrMsg').className = 'msg';
   $('omrProg').hidden = false; $('omrBar').style.width = '0%'; $('omrProgText').textContent = 'ファイルを開いています…';
   let src;
@@ -1935,11 +1944,23 @@ function omrRender(){
 function omrRenderReview(){
   const box = $('omrReview');
   if(!OMR.items.length){ box.innerHTML = '<div class="rv-done">✅ 確認が必要なマークはありません。下の「確定して保存」を押してください。</div>'; return; }
+  const chipsOf = () => `<div class="rv-chips">${OMR.items.map((x, i) => `<button class="rv-chip ${x.done ? 'done' : ''} ${!OMR.finished && i === OMR.cur ? 'cur' : ''}" data-i="${i}" title="${esc(omrStudentLabel(x.s))}">${x.q === 'id' ? '番号' : '問' + (x.q + 1)}</button>`).join('')}</div>`;
+  if(OMR.finished){
+    box.innerHTML = `<div class="rv-finish"><div class="big">🎉 確認が終了しました！</div>
+      <div>${OMR.items.length}か所 すべて確認しました。下の「💾 確定して保存」を押すと、マークデータとして保存されます。</div>
+      <div class="row" style="margin-top:12px;gap:10px"><button class="btn primary" id="rvGoSave">💾 確定して保存へ（Enter）</button>
+      <button class="btn" id="rvBack">◀ もう一度見直す</button></div>
+      <div class="small muted" style="margin-top:10px">見直したいときは、下の「問◯」を押してください。</div></div>` + chipsOf();
+    $('rvGoSave').onclick = () => { $('omrSave').scrollIntoView({block:'center', behavior:'smooth'}); $('omrSave').focus(); };
+    $('rvBack').onclick = () => { OMR.finished = false; OMR.cur = OMR.items.length - 1; omrRenderReview(); };
+    box.querySelectorAll('.rv-chip').forEach(b => b.onclick = () => { OMR.finished = false; OMR.cur = +b.dataset.i; omrRenderReview(); });
+    return;
+  }
   const it = OMR.items[OMR.cur], s = it.s;
   const nav = `<div class="rv-nav"><b>確認が必要なマーク　${OMR.cur + 1} / ${OMR.items.length}</b>
       <span class="small muted">（のこり ${OMR.items.filter(x => !x.done).length}）</span><span style="flex:1"></span>
       <button class="btn" id="rvPrev">◀ 前へ</button><button class="btn" id="rvNext">次へ ▶</button></div>`;
-  const chips = `<div class="rv-chips">${OMR.items.map((x, i) => `<button class="rv-chip ${x.done ? 'done' : ''} ${i === OMR.cur ? 'cur' : ''}" data-i="${i}" title="${esc(omrStudentLabel(x.s))}">${x.q === 'id' ? '番号' : '問' + (x.q + 1)}</button>`).join('')}</div>`;
+  const chips = chipsOf();
   if(it.q === 'id'){
     box.innerHTML = nav + `<div class="rv-card">
       <div class="rv-img"><img src="${s.idCrop}" style="width:300px"><img src="${s.nameCrop}" style="width:300px;margin-top:8px"></div>
@@ -1960,45 +1981,65 @@ function omrRenderReview(){
     setTimeout(() => $('rvSid').focus(), 30);
   }else{
     const q = it.q, L = s.layout, qq = L.questions[q], cur = s.answers[q];
+    const sel = new Set(String(cur || '').split('|').filter(Boolean));
     const left = qq.x0 + 1, top = qq.cy - L.ans.rh/2 - 0.3, k = 10, show = 2;   // 表示倍率
     const rings = qq.cells.map(([cx, cy], i) => {
       const x = (cx - left)*k*show, y = (cy - top)*k*show, rw = L.bub.w*k*show*0.62, rh = L.bub.h*k*show*0.75;
-      const cls = String(i + 1) === cur ? 'pick' : ((s.cands && s.cands[q] || []).includes(i) ? 'cand' : '');
-      return `<button class="ring ${cls}" data-a="${i + 1}" style="left:${x - rw}px;top:${y - rh}px;width:${rw*2}px;height:${rh*2}px" title="${i + 1}にする"></button>`;
+      const cls = sel.has(String(i + 1)) ? 'pick' : ((s.cands && s.cands[q] || []).includes(i) ? 'cand' : '');
+      return `<button class="ring ${cls}" data-a="${i + 1}" style="left:${x - rw}px;top:${y - rh}px;width:${rw*2}px;height:${rh*2}px" title="${i + 1}を選ぶ／もどす"></button>`;
     }).join('');
     const w = (L.ans.colw - 2)*k*show;
     box.innerHTML = nav + `<div class="rv-card">
       <div class="rv-img"><div class="rv-crop" style="width:${w}px"><img src="${s.crops[q]}" style="width:${w}px">${rings}</div></div>
       <div class="rv-side"><div class="rv-who">${esc(omrStudentLabel(s))}<br><span class="small muted">${s.page}枚目</span></div>
         <div class="rv-why">問${q + 1}：${ST_LABEL[s.status[q]] || ''}</div>
-        <div class="rv-ans">${[1, 2, 3, 4].map(a => `<button class="btn ${cur === String(a) ? 'primary' : ''}" data-a="${a}">${a}</button>`).join('')}
-          <button class="btn ${cur === '' ? 'primary' : ''}" data-a="">空欄</button></div>
+        <div class="rv-ans">${[1, 2, 3, 4].map(a => `<button class="btn ${sel.has(String(a)) ? 'primary' : ''}" data-a="${a}">${a}</button>`).join('')}
+          <button class="btn ${sel.size ? '' : 'primary'}" data-a="">空欄</button></div>
+        <div class="rv-now">今の答え：<b>${sel.size ? [...sel].sort().join('・') : '空欄'}</b>${sel.size > 1 ? '<span class="small muted">（2つ以上）</span>' : ''}</div>
         <button class="btn ok-btn" id="rvOk">✓ この答えでOK（Enter）</button>
-        <div class="small muted" style="margin-top:8px">キーボード：1〜4 で答えを決める、0 で空欄、Enter でOK、← → で前・次</div></div></div>` + chips;
-    box.querySelectorAll('[data-a]').forEach(b => b.onclick = () => omrSet(b.dataset.a));
-    $('rvOk').onclick = () => omrSet(cur);
+        <div class="small muted" style="margin-top:8px">数字をおすと選ぶ、もう一度おすと元にもどります（2つ以上も選べます）。<br>キーボード：1〜4 で選ぶ／もどす、0 で空欄、Enter でOK、← → で前・次</div></div></div>` + chips;
+    box.querySelectorAll('[data-a]').forEach(b => b.onclick = () => b.dataset.a ? omrToggle(b.dataset.a) : omrClear());
+    $('rvOk').onclick = omrOk;
   }
   $('rvPrev').onclick = () => { OMR.cur = Math.max(0, OMR.cur - 1); omrRenderReview(); };
   $('rvNext').onclick = () => { OMR.cur = Math.min(OMR.items.length - 1, OMR.cur + 1); omrRenderReview(); };
   box.querySelectorAll('.rv-chip').forEach(b => b.onclick = () => { OMR.cur = +b.dataset.i; omrRenderReview(); });
 }
-function omrSet(a){
+// 答えの「選ぶ／もどす」。答えは「2|4」のように、2つ以上も入る
+function toggleAns(v, a){
+  const set = new Set(String(v || '').split('|').filter(Boolean));
+  set.has(a) ? set.delete(a) : set.add(a);
+  return [...set].sort().join('|');
+}
+function omrToggle(a){
   const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
-  it.s.answers[it.q] = a; it.s.edited = it.s.edited || {}; it.s.edited[it.q] = true; it.done = true;
-  omrNextOpen(); omrRender();
+  it.s.answers[it.q] = toggleAns(it.s.answers[it.q], a);
+  it.s.edited = it.s.edited || {}; it.s.edited[it.q] = true;
+  omrRenderReview();
+}
+function omrClear(){
+  const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
+  it.s.answers[it.q] = ''; it.s.edited = it.s.edited || {}; it.s.edited[it.q] = true;
+  omrRenderReview();
+}
+function omrOk(){
+  const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
+  it.done = true; omrNextOpen(); omrRender();
 }
 function omrNextOpen(){
   const n = OMR.items.length;
-  for(let d = 1; d <= n; d++){ const i = (OMR.cur + d) % n; if(!OMR.items[i].done){ OMR.cur = i; return; } }
+  for(let d = 1; d <= n; d++){ const i = (OMR.cur + d) % n; if(!OMR.items[i].done){ OMR.cur = i; OMR.finished = false; return; } }
+  OMR.finished = n > 0 && OMR.items.every(x => x.done);   // 全部おわった
 }
 document.addEventListener('keydown', e => {
   if($('tab-marks').hidden || $('omrResult').hidden || !OMR.items.length) return;
   if(!$('sheetDialog').hidden || !$('confirmDialog').hidden) return;
   if(e.target.matches('input, select, textarea')) return;
+  if(OMR.finished){ if(e.key === 'Enter'){ e.preventDefault(); $('rvGoSave').click(); } return; }
   const it = OMR.items[OMR.cur]; if(!it || it.q === 'id') return;
-  if(/^[1-4]$/.test(e.key)){ e.preventDefault(); omrSet(e.key); }
-  else if(e.key === '0'){ e.preventDefault(); omrSet(''); }
-  else if(e.key === 'Enter'){ e.preventDefault(); omrSet(it.s.answers[it.q]); }
+  if(/^[1-4]$/.test(e.key)){ e.preventDefault(); omrToggle(e.key); }
+  else if(e.key === '0'){ e.preventDefault(); omrClear(); }
+  else if(e.key === 'Enter'){ e.preventDefault(); omrOk(); }
   else if(e.key === 'ArrowRight'){ e.preventDefault(); $('rvNext').click(); }
   else if(e.key === 'ArrowLeft'){ e.preventDefault(); $('rvPrev').click(); }
 });
@@ -2028,7 +2069,7 @@ function omrOpenSheet(i){
     L.questions.forEach((q, qi) => {
       const st = s.status[qi], a = s.answers[qi], edited = s.edited && s.edited[qi];
       q.cells.forEach(([cx, cy], k) => {
-        const on = a === String(k + 1);
+        const on = String(a || '').split('|').includes(String(k + 1));
         let cls = on ? (edited ? 'e' : (st === 'ok' ? 'g' : 'y')) : '';
         if(!on && st !== 'ok' && st !== 'blank' && !edited && (s.cands && s.cands[qi] || []).includes(k)) cls = 'y';
         o += `<ellipse class="hit ${cls}" data-q="${qi}" data-a="${k + 1}" cx="${cx}" cy="${cy}" rx="${L.bub.w/2 + 0.6}" ry="${L.bub.h/2 + 0.6}"/>`;
@@ -2037,7 +2078,7 @@ function omrOpenSheet(i){
     $('sheetSvg').innerHTML = o;
     $('sheetSvg').querySelectorAll('.hit').forEach(el => el.onclick = () => {
       const qi = +el.dataset.q, a = el.dataset.a;
-      s.answers[qi] = s.answers[qi] === a ? '' : a;
+      s.answers[qi] = toggleAns(s.answers[qi], a);
       s.edited = s.edited || {}; s.edited[qi] = true;
       OMR.items.forEach(it => { if(it.s === s && it.q === qi) it.done = true; });
       draw(); omrRender();
@@ -2054,7 +2095,7 @@ async function omrSave(){
   const left = OMR.items.filter(it => !it.done).length;
   if(left){
     const go = await confirmBox('まだ確認していないマークがあります',
-      `確認していないマークが <b>${left}か所</b> あります。<br>そのまま保存すると、うすいマークは読み取った候補の答えで、2つぬってあるものは空欄で保存されます。`,
+      `確認していないマークが <b>${left}か所</b> あります。<br>そのまま保存すると、うすいマークは読み取った候補の答えで、2つぬってあるものは空欄のまま保存されます。`,
       'このまま保存する', 'もどって確認する');
     if(!go) return;
   }
