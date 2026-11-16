@@ -591,7 +591,7 @@ input.bad{border-color:var(--err) !important;background:var(--err-weak)}
 <div class="overlay" id="dupDialog" hidden>
   <div class="dialog" role="alertdialog" aria-labelledby="dupTitle">
     <h3 id="dupTitle">⚠ 学籍番号が同じ番号がいます</h3>
-    <div class="small muted">数字7ケタが同じ学生が <b id="dupCount"></b> 組あります。マークデータの学籍番号は数字だけのことが多いので、このままでは結果をつなげられません。登録をまちがえていないか確認してください。</div>
+    <div class="small muted">同じ期に、数字7ケタが同じ学生が <b id="dupCount"></b> 組あります。マークデータの学籍番号は数字だけのことが多いので、このままでは結果をつなげられません。登録をまちがえていないか確認してください。</div>
     <div id="dupBody"></div>
     <div class="row" style="justify-content:flex-end"><button class="btn primary" id="dupClose">確認しました</button></div>
   </div>
@@ -733,11 +733,12 @@ function findHeader(aoa, word){
 }
 
 /* ========= 学生 ========= */
-function findStudent(id){
+function findStudent(id, term){
   const n = norm(id); if(!n) return null;
   let s = S.students.find(x => norm(x.id) === n); if(s) return s;
   const d = digits(id); if(!d) return null;
-  const c = S.students.filter(x => digits(x.id) === d);
+  let c = S.students.filter(x => digits(x.id) === d);
+  if(c.length > 1 && term) c = c.filter(x => clsOf(x, term));   // 同じ数字が何人もいるときは、その期の学生でしぼる
   return c.length === 1 ? c[0] : null;
 }
 /* ----- 期の入力（年と期を選ぶ） ----- */
@@ -894,29 +895,29 @@ $('stuFile').onchange = async e => {
     });
     if(term) setTerm('stuTerm', term);
     await saveStudents(); renderStudents();
-    const dups = dupGroups();
+    const dups = dupGroups(term || $('stuTerm').value);
     let text = `読み込みました：新しく ${added}人、更新 ${updated}人（合計 ${S.students.length}人）` + (term ? `\n${term}期のクラスとして登録しました。` : '')
       + (nPre ? `\nそのうち ${nPre}人を「プレメン（クラス未定）」として登録しました。クラスが決まったら、クラスを入れたエクセルを「追加・更新」で読み込んでください。` : '');
     if(dups.length){
-      text += `\n\n⚠ 学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）\n` + dupText(dups);
+      text += `\n\n⚠ ${term || $('stuTerm').value}期に、学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）\n` + dupText(dups, term || $('stuTerm').value);
       showMsg($('stuMsg'), 'warn', text);
-      showDupDialog(dups);
+      showDupDialog(dups, term || $('stuTerm').value);
     }else showMsg($('stuMsg'), 'ok', text);
   }catch(err){ showMsg($('stuMsg'), 'err', 'ファイルを読めませんでした：' + err.message); }
 };
 armDanger($('stuClear'), async () => { S.students = []; await saveStudents(); renderStudents(); showMsg($('stuMsg'),'ok','学生情報をすべて削除しました。'); });
 $('stuClassFilter').onchange = renderStudents;
-function dupGroups(){
+function dupGroups(term){
   const map = {};
-  S.students.forEach(s => { const d = digits(s.id); if(d) (map[d] = map[d] || []).push(s); });
+  S.students.filter(s => !term || clsOf(s, term)).forEach(s => { const d = digits(s.id); if(d) (map[d] = map[d] || []).push(s); });
   return Object.entries(map).filter(([d, list]) => list.length > 1).map(([d, list]) => ({d, list}));
 }
-function dupText(dups){
-  return dups.map(g => `・${g.d}：` + g.list.map(s => `${s.id}（${latestCls(s)}）${s.nameEn || s.nameKana || ''}`).join(' ／ ')).join('\n');
+function dupText(dups, term){
+  return dups.map(g => `・${g.d}：` + g.list.map(s => `${s.id}（${term ? clsOf(s, term) : latestCls(s)}）${s.nameEn || s.nameKana || ''}`).join(' ／ ')).join('\n');
 }
-function showDupDialog(dups){
+function showDupDialog(dups, term){
   $('dupBody').innerHTML = dups.map(g => `<div class="dup-group"><b>${esc(g.d)}</b><table><tbody>` +
-    g.list.map(s => `<tr><td>${esc(latestCls(s))}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td></tr>`).join('') +
+    g.list.map(s => `<tr><td>${esc(term ? clsOf(s, term) : latestCls(s))}</td><td>${esc(s.id)}</td><td>${esc(s.nameEn)}</td><td>${esc(s.nameKana)}</td></tr>`).join('') +
     '</tbody></table></div>').join('');
   $('dupCount').textContent = dups.length;
   $('dupDialog').hidden = false;
@@ -926,11 +927,11 @@ function renderStudents(){
   if(!$('stuTerm').value) setTerm('stuTerm', termNow());
   const vt = $('stuTerm').value;
   fillClassSelect($('stuClassFilter'), 'すべてのクラス', vt);
-  const dups = dupGroups();
+  const dups = dupGroups(vt);   // 選んでいる期の中だけで調べる
   const dupDigits = new Set(dups.map(g => g.d));
   $('stuDupBanner').hidden = !dups.length;
-  if(dups.length) $('stuDupBanner').innerHTML = `⚠ 学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）。表の<span class="dup-mark">黄色の行</span>を確認してください。 <button class="btn" id="dupShow">くわしく見る</button>`;
-  if(dups.length) $('dupShow').onclick = () => showDupDialog(dups);
+  if(dups.length) $('stuDupBanner').innerHTML = `⚠ ${vt}期に、学籍番号が同じ番号がいます（数字7ケタが同じ：${dups.length}組）。表の<span class="dup-mark">黄色の行</span>を確認してください。 <button class="btn" id="dupShow">くわしく見る</button>`;
+  if(dups.length) $('dupShow').onclick = () => showDupDialog(dups, vt);
   const f = $('stuClassFilter').value;
   const inTerm = S.students.filter(s => clsOf(s, vt));
   const q = norm($('stuSearch').value);
@@ -1179,7 +1180,7 @@ $('mFile').onchange = async e => {
     for(let r = start; r < aoa.length; r++){
       const raw = String(aoa[r][cId] ?? '').trim(); if(!raw) continue;
       width = Math.max(width, aoa[r].reduce((m,v,i) => String(v).trim() !== '' ? i : m, 0) - cId);
-      const st = findStudent(raw);
+      const st = findStudent(raw, tOf(ex));
       if(!st) unknown.push(raw);
       marks[st ? st.id : raw] = colMap.map(c => z2h(String(aoa[r][c] ?? '').trim()));
       n++;
@@ -1209,7 +1210,7 @@ function renderMarks(){
   const ids = ex ? Object.keys(ex.marks) : [];
   $('mCount').textContent = ids.length + '人';
   if(!ex || !ids.length){ $('mTable').innerHTML = '<tbody><tr><td class="empty">まだ読み込まれていません。</td></tr></tbody>'; return; }
-  const rows = ids.map(id => ({id, st: findStudent(id)}))
+  const rows = ids.map(id => ({id, st: findStudent(id, tOf(ex))}))
     .sort((a,b) => clsOf(a.st, tOf(ex)).localeCompare(clsOf(b.st, tOf(ex))) || a.id.localeCompare(b.id));
   $('mTable').innerHTML = '<thead><tr><th>学籍番号</th><th>クラス</th><th>氏名（英字）</th><th>氏名（カナ）</th>' + ex.questions.map(q => `<th class="num">${esc(q.no)}</th>`).join('') + '</tr></thead><tbody>' +
     rows.map(({id, st}) => { return `<tr><td>${esc(id)}</td>` +
@@ -1235,7 +1236,7 @@ function scoreAll(ex){
   const catMax = Object.fromEntries(cats.map(c => [c, ex.questions.filter(q => q.cat === c).reduce((a,q) => a + q.pts, 0)]));
   const max = ex.questions.reduce((a,q) => a + q.pts, 0);
   const rows = Object.entries(ex.marks).map(([id, m]) => {
-    const st = findStudent(id) || {id, classes:{}, nameEn:'（未登録）', nameKana:''};
+    const st = findStudent(id, tOf(ex)) || {id, classes:{}, nameEn:'（未登録）', nameKana:''};
     const r = {id: st.id, cls: clsOf(st, tOf(ex)), nameEn: st.nameEn, nameKana: st.nameKana, total: 0, cat:{}, ok:[], mark:[]};
     cats.forEach(c => r.cat[c] = 0);
     ex.questions.forEach((q,i) => {
@@ -1913,7 +1914,7 @@ function omrResolve(){
     // 学生
     let sid = s.kind === 'personal' ? s.qr.sid : s.idRead;
     if(s.manualSid) sid = s.manualSid;
-    const st = sid && !/\?/.test(sid) ? findStudent(sid) : null;
+    const st = sid && !/\?/.test(sid) ? findStudent(sid, tOf(ex)) : null;
     s.student = st; s.sid = st ? st.id : (sid && !/\?/.test(sid) ? sid : '');
     if(!s.qr) s.problems.push('QRコードが読めませんでした（予備シートとして読みました）。');
     if(!s.sid) s.problems.push('学籍番号が読めません。下で学生を選んでください。');
@@ -1977,7 +1978,7 @@ function omrRenderReview(){
         <datalist id="rvStuList">${S.students.map(x => `<option value="${esc(x.id)}">${esc(x.nameEn)} ${esc(x.nameKana)}</option>`).join('')}</datalist>
         <button class="btn primary" id="rvSidOk">この学生にする（Enter）</button></div></div>` + chips;
     $('rvSidOk').onclick = () => {
-      const v = $('rvSid').value.trim(); const st = findStudent(v) || S.students.find(x => norm(x.nameEn) === norm(v) || norm(x.nameKana) === norm(v));
+      const v = $('rvSid').value.trim(); const st = findStudent(v, tOf(S.exams[OMR.exam])) || S.students.find(x => norm(x.nameEn) === norm(v) || norm(x.nameKana) === norm(v));
       // 登録されていない番号でも、数字7ケタならそのまま使える（あとで学生を登録すれば結果に名前が出る）
       if(!st && !/^\d{7}$/.test(z2h(v))){ $('rvSid').classList.add('bad'); return; }
       s.manualSid = st ? st.id : z2h(v); it.done = true; omrResolve();
