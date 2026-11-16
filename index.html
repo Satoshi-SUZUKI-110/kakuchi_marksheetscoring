@@ -320,6 +320,12 @@ input.bad{border-color:var(--err) !important;background:var(--err-weak)}
 .rv-finish{background:#fff;border:2px solid #b9dfc8;border-radius:10px;padding:18px 20px}
 .rv-finish .big{font-size:22px;font-weight:700;color:var(--ok);margin-bottom:6px}
 .rv-now{margin:0 0 10px;font-size:15px}
+.ans-line{display:flex;align-items:center;gap:2px;line-height:1.9}
+.ans-line .ans-no{display:inline-block;width:46px;color:var(--sub);font-size:12px;font-family:"Noto Sans JP",sans-serif}
+.ans-line .a{display:inline-block;min-width:20px;text-align:center}
+.ans-line .a.multi{color:#b25b00;font-weight:700;min-width:34px}
+.ans-line .a.ed{background:#e3ebfb;border-radius:4px}
+.ans-more{margin-top:4px;border:none;background:none;color:var(--accent);cursor:pointer;font:inherit;font-size:13px;padding:2px 0;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -1864,7 +1870,7 @@ async function filesToCanvases(files, onProgress){
 async function omrRead(files){
   const ex = markExam();
   if(!ex || !ex.questions.length){ showMsg($('omrMsg'), 'err', '先に「② 試験を登録」で設問を登録して、上で試験を選んでください。'); return; }
-  OMR.sheets = []; OMR.items = []; OMR.cur = 0; OMR.exam = ex.id; OMR.finished = false;
+  OMR.sheets = []; OMR.items = []; OMR.cur = 0; OMR.exam = ex.id; OMR.finished = false; ansOpen.clear();
   $('omrResult').hidden = true; $('omrMsg').className = 'msg';
   $('omrProg').hidden = false; $('omrBar').style.width = '0%'; $('omrProgText').textContent = 'ファイルを開いています…';
   let src;
@@ -2044,19 +2050,36 @@ document.addEventListener('keydown', e => {
   else if(e.key === 'ArrowLeft'){ e.preventDefault(); $('rvPrev').click(); }
 });
 
+// 答えを10問ずつ並べる（はじめは1〜10問だけ。「▼ 全部見る」で全部）
+const ansOpen = new Set();
+function ansBlock(s, i, Q){
+  const n = Math.min(Q || s.answers.length, s.answers.length), open = ansOpen.has(i);
+  const line = from => {
+    const cells = s.answers.slice(from, Math.min(from + 10, n)).map((a, k) => {
+      const edited = s.edited && s.edited[from + k];
+      return `<span class="a${a.includes('|') ? ' multi' : ''}${edited ? ' ed' : ''}">${esc(a ? a.split('|').join('・') : '-')}</span>`;
+    }).join('');
+    return `<div class="ans-line"><span class="ans-no">${from + 1}〜</span>${cells}</div>`;
+  };
+  let h = line(0);
+  if(open) for(let f = 10; f < n; f += 10) h += line(f);
+  if(n > 10) h += `<button class="ans-more" data-ans="${i}">${open ? '▲ 閉じる' : `▼ 全部見る（${n}問）`}</button>`;
+  return h;
+}
 function omrRenderSheets(){
   const Q = (S.exams[OMR.exam] || {questions: []}).questions.length;
-  $('omrSheets').innerHTML = `<thead><tr><th>枚目</th><th>種類</th><th>学生</th><th>読み取った答え（はじめの10問）</th><th>確認</th><th>注意</th><th></th></tr></thead><tbody>` +
+  $('omrSheets').innerHTML = `<thead><tr><th>枚目</th><th>種類</th><th>学生</th><th>読み取った答え</th><th>確認</th><th>注意</th><th></th></tr></thead><tbody>` +
     OMR.sheets.map((s, i) => {
       const items = OMR.items.filter(it => it.s === s), left = items.filter(it => !it.done).length;
       return `<tr${s.use ? '' : ' class="unused"'}><td class="num">${s.page}</td><td>${s.error ? '—' : (s.kind === 'personal' ? '個人用' : '予備') + (s.n ? ` ${s.n}問` : '')}</td>
         <td>${s.error ? '' : esc(omrStudentLabel(s))}</td>
-        <td class="mono">${s.error ? '' : s.answers.slice(0, 10).map(a => a || '-').join(' ')}</td>
+        <td class="mono">${s.error ? '' : ansBlock(s, i, Q)}</td>
         <td>${items.length ? (left ? `<span class="pre-tag">のこり ${left}</span>` : '✓') : ''}</td>
         <td class="small">${s.problems.map(esc).join('<br>')}</td>
         <td>${s.error ? '' : `<button class="btn" data-sheet="${i}">画像を見る</button>`}</td></tr>`;
     }).join('') + '</tbody>';
   $('omrSheets').querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => omrOpenSheet(+b.dataset.sheet));
+  $('omrSheets').querySelectorAll('[data-ans]').forEach(b => b.onclick = () => { const i = +b.dataset.ans; ansOpen.has(i) ? ansOpen.delete(i) : ansOpen.add(i); omrRenderSheets(); });
 }
 
 // シート全体の画像と、読み取った答え（クリックで直せる）
