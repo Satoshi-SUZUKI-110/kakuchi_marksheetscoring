@@ -616,6 +616,7 @@ const z2h = s => String(s ?? '').replace(/[０-９ＡＺａ-ｚＡ-Ｚ｜]/g, c 
 function setStatus(t, type){ const el = $('storeStatus'); el.textContent = t; el.dataset.type = type || ''; }
 const ERR = {
   wrong_password: 'パスワードがちがいます。',
+  unknown_action: 'GASのプログラムが古いままです。新しい「コード.gs」に入れかえて、「新バージョン」でデプロイしてください。',
   no_password_set: 'GASにパスワード（PASSWORD）が設定されていません。',
   network: 'サーバーに接続できませんでした。インターネットとGASのURLを確認してください。',
 };
@@ -630,21 +631,38 @@ async function api(action, body){
 }
 const errText = e => ERR[e.message] || ('エラー：' + e.message);
 
-// 書き込みは1つずつ順番に
-let queue = Promise.resolve(); let pending = 0;
+/* 何人が同時に使っても消えないように：
+   保存するときは「変えたところだけ」を送り、GAS の側で今のデータに足す。
+   保存のあとは、ほかの先生の変更も入った最新のデータを受け取って、画面を新しくする。 */
+let queue = Promise.resolve(); let pending = 0; let lastSync = 0;
+function applyServerData(d){
+  if(!d) return;
+  S.students = normStudents(d.students); S.exams = d.exams || {};
+  lastSync = Date.now();
+  renderAll();
+}
 function enqueue(action, body){
   pending++; setStatus('保存中…');
-  const p = queue.then(() => api(action, body)).then(() => {
-    if(--pending === 0) setStatus('✓ 保存しました', 'ok');
+  const p = queue.then(() => api(action, body)).then(j => {
+    if(--pending === 0){ applyServerData(j.data); setStatus('✓ 保存しました（ほかの先生の変更も読み込みました）', 'ok'); }
+    return true;
   }).catch(e => {
     pending--; setStatus('⚠ 保存できませんでした：' + errText(e), 'err');
+    showMsg(document.querySelector('main section:not([hidden]) .msg') || $('stuMsg'), 'err', '保存できませんでした：' + errText(e));
     if(e.message === 'wrong_password') logout();
+    return false;
   });
-  queue = p; return p;
+  queue = p.catch(() => {}); return p;
 }
-const saveStudents = () => enqueue('saveStudents', {rows: S.students});
-const saveExam = ex => enqueue('saveExam', {exam: {id:ex.id, name:ex.name, term:ex.term || '', created:ex.created, questions:ex.questions, marks:ex.marks}});
-const deleteDoc = name => enqueue('deleteExam', {id: name.replace(/^exam-/, '')});
+const patchStudents = body => enqueue('patchStudents', body);
+const saveExamMeta = ex => enqueue('saveExamMeta', {exam: {id:ex.id, name:ex.name, term:ex.term || '', created:ex.created, questions:ex.questions}});
+const mergeMarks = (ex, marks, replace) => enqueue('mergeMarks', {examId: ex.id, marks, replace: !!replace});
+const deleteExamSrv = id => enqueue('deleteExam', {id});
+// 最新のデータを読み込む（画面を切りかえたときなど）
+async function syncNow(){
+  if(pending) return;
+  try{ const j = await api('load'); if(!pending) applyServerData(j.data); }catch(e){}
+}
 
 function normStudents(list){
   return (list || []).map(s => ({id: s.id, nameEn: s.nameEn || '', nameKana: s.nameKana || '',
@@ -655,7 +673,7 @@ async function login(pw, remember){
   $('loginMsg').textContent = '確認しています…'; $('loginBtn').disabled = true;
   try{
     const j = await api('load');
-    S.students = normStudents(j.data.students); S.exams = j.data.exams || {};
+    S.students = normStudents(j.data.students); S.exams = j.data.exams || {}; lastSync = Date.now();
     try{ (remember ? localStorage : sessionStorage).setItem(PW_KEY, pw); }catch(e){}
     $('login').hidden = true; $('app').hidden = false;
     setStatus('✓ Googleドライブに保存しています', 'ok');
@@ -672,7 +690,7 @@ function logout(){
 }
 async function reload(){
   setStatus('読み込み中…');
-  try{ const j = await api('load'); S.students = normStudents(j.data.students); S.exams = j.data.exams || {}; renderAll(); setStatus('✓ 最新のデータを読み込みました', 'ok'); }
+  try{ const j = await api('load'); applyServerData(j.data); setStatus('✓ 最新のデータを読み込みました', 'ok'); }
   catch(e){ setStatus('⚠ ' + errText(e), 'err'); }
 }
 function init(){
@@ -876,14 +894,16 @@ $('stuFile').onchange = async e => {
     }
     if(!rows.length){ showMsg($('stuMsg'), 'err', '学生のデータがありませんでした。'); return; }
     let added = 0, updated = 0;
-    if($('stuMode').value === 'replace' && term) S.students.forEach(s => { if(s.classes) delete s.classes[term]; });
-    let nPre = 0;
+    const clearTerm = $('stuMode').value === 'replace' && term ? term : '';
+    if(clearTerm) S.students.forEach(s => { if(s.classes) delete s.classes[term]; });
+    let nPre = 0; const ups = [];
     rows.forEach(r => {
       let s = S.students.find(x => norm(x.id) === norm(r.id));
       if(s){ updated++; } else { s = {id: r.id, nameEn:'', nameKana:'', classes:{}}; S.students.push(s); added++; }
       if(r.nameEn) s.nameEn = r.nameEn;
       if(r.nameKana) s.nameKana = r.nameKana;
       s.classes = s.classes || {};
+      const u = {id: s.id, nameEn: r.nameEn, nameKana: r.nameKana}; ups.push(u);
       if(!term) return;
       // ほかの期にクラスがない学生＝新入生
       const isNew = !Object.keys(s.classes).some(t => t !== term && s.classes[t]);
@@ -891,10 +911,11 @@ $('stuFile').onchange = async e => {
       if(c !== null && isPreWord(c)) c = PRE;
       if((c === null || c === '') && isNew) c = PRE;   // クラスが空欄の新入生は「プレメン」
       if(c === null) return;
-      if(c){ s.classes[term] = c; if(c === PRE) nPre++; } else delete s.classes[term];
+      if(c){ s.classes[term] = c; u.setClasses = {[term]: c}; if(c === PRE) nPre++; } else { delete s.classes[term]; u.delClasses = [term]; }
     });
     if(term) setTerm('stuTerm', term);
-    await saveStudents(); renderStudents();
+    renderStudents();
+    if(!await patchStudents({clearTerm, upserts: ups})) return;
     const dups = dupGroups(term || $('stuTerm').value);
     let text = `読み込みました：新しく ${added}人、更新 ${updated}人（合計 ${S.students.length}人）` + (term ? `\n${term}期のクラスとして登録しました。` : '')
       + (nPre ? `\nそのうち ${nPre}人を「プレメン（クラス未定）」として登録しました。クラスが決まったら、クラスを入れたエクセルを「追加・更新」で読み込んでください。` : '');
@@ -905,7 +926,7 @@ $('stuFile').onchange = async e => {
     }else showMsg($('stuMsg'), 'ok', text);
   }catch(err){ showMsg($('stuMsg'), 'err', 'ファイルを読めませんでした：' + err.message); }
 };
-armDanger($('stuClear'), async () => { S.students = []; await saveStudents(); renderStudents(); showMsg($('stuMsg'),'ok','学生情報をすべて削除しました。'); });
+armDanger($('stuClear'), async () => { S.students = []; renderStudents(); if(await patchStudents({clearAll: true})) showMsg($('stuMsg'),'ok','学生情報をすべて削除しました。'); });
 $('stuClassFilter').onchange = renderStudents;
 function dupGroups(term){
   const map = {};
@@ -1027,24 +1048,21 @@ $('edSave').onclick = async () => {
   const oldId = editing ? editing.id : null;
   if(!editing){ editing = {id, nameEn:'', nameKana:'', classes:{}}; S.students.push(editing); }
   editing.id = id; editing.nameEn = en; editing.nameKana = kana; editing.classes = classes;
+  // 学籍番号を変えたときは、マークデータの学籍番号も変える（GAS の側でも同じようにする）
+  if(oldId && oldId !== id) Object.values(S.exams).forEach(ex => { if(ex.marks && ex.marks[oldId]){ ex.marks[id] = ex.marks[oldId]; delete ex.marks[oldId]; } });
   $('editDialog').hidden = true;
-  await saveStudents();
-  // 学籍番号を変えたときは、マークデータの学籍番号も変える
-  if(oldId && oldId !== id){
-    for(const ex of Object.values(S.exams)){
-      if(ex.marks && ex.marks[oldId]){ ex.marks[id] = ex.marks[oldId]; delete ex.marks[oldId]; await saveExam(ex); }
-    }
-  }
   renderAll();
-  showMsg($('stuMsg'), 'ok', `「${en || kana || id}」さんの情報を保存しました。`);
+  if(await patchStudents({upserts: [{id, from: oldId || '', nameEn: en, nameKana: kana, classes, full: true}]}))
+    showMsg($('stuMsg'), 'ok', `「${en || kana || id}」さんの情報を保存しました。`);
 };
 armDanger($('edDelete'), async () => {
   if(!editing) return;
   const name = editing.nameEn || editing.nameKana || editing.id;
+  const delId = editing.id;
   S.students = S.students.filter(s => s !== editing);
-  $('editDialog').hidden = true;
-  await saveStudents(); renderAll();
-  showMsg($('stuMsg'), 'ok', `「${name}」さんを削除しました（マークデータは残っています）。`);
+  $('editDialog').hidden = true; renderAll();
+  if(await patchStudents({deletes: [delId]}))
+    showMsg($('stuMsg'), 'ok', `「${name}」さんを削除しました（マークデータは残っています）。`);
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('editDialog').hidden) $('editDialog').hidden = true; });
 
@@ -1113,10 +1131,11 @@ $('qFile').onchange = async e => {
     if(!name){ showMsg($('qMsg'), 'err', '試験名を入力してください（画面の①、またはエクセルの「試験名」欄）。'); return; }
     const term = normTerm($('examTerm').value) || fileTerm || normTerm(name) || termNow();
     let ex = curExam();
-    if(!ex){ const id = 'e' + Date.now().toString(36); ex = S.exams[id] = {id, name, term, questions:[], marks:{}, created:Date.now()}; S.curExam = id; }
+    if(!ex){ const id = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); ex = S.exams[id] = {id, name, term, questions:[], marks:{}, created:Date.now()}; S.curExam = id; }
     const changedCount = ex.questions.length && ex.questions.length !== qs.length;
     ex.name = name; ex.term = term; ex.questions = qs;
-    await saveExam(ex); renderAll();
+    renderAll();
+    if(!await saveExamMeta(ex)) return;
     const tot = qs.reduce((a,q) => a + q.pts, 0);
     let text = `「${name}」（${term}期）に ${qs.length}問（満点 ${tot}点）を登録しました。`;
     if(changedCount && Object.keys(ex.marks).length) text += '\n※ 設問の数が変わりました。マークデータを読み込み直してください。';
@@ -1128,12 +1147,12 @@ $('examRename').onclick = async () => {
   const ex = curExam(); const n = $('examName').value.trim(); if(!ex || !n) return;
   const t = normTerm($('examTerm').value);
   if(!t){ showMsg($('qMsg'), 'err', '期を4ケタの数字で入れてください（例：2610）。'); return; }
-  ex.name = n; ex.term = t; await saveExam(ex); renderAll(); showMsg($('qMsg'), 'ok', '試験名と期を保存しました。');
+  ex.name = n; ex.term = t; renderAll(); if(await saveExamMeta(ex)) showMsg($('qMsg'), 'ok', '試験名と期を保存しました。');
 };
 armDanger($('examDelete'), async () => {
   const ex = curExam(); if(!ex) return;
-  delete S.exams[ex.id]; S.curExam = null; await deleteDoc('exam-' + ex.id); renderAll();
-  showMsg($('qMsg'), 'ok', '「' + ex.name + '」を削除しました。');
+  delete S.exams[ex.id]; S.curExam = null; renderAll();
+  if(await deleteExamSrv(ex.id)) showMsg($('qMsg'), 'ok', '「' + ex.name + '」を削除しました。');
 });
 function renderQuestions(){
   const ex = curExam();
@@ -1187,15 +1206,18 @@ $('mFile').onchange = async e => {
     }
     if(!n){ showMsg($('mMsg'), 'err', 'マークのデータがありませんでした。'); return; }
     let replace = $('markMode').value === 'replace';
-    const before = Object.keys(ex.marks || {}).length;
+    if(replace) await syncNow();   // ほかの先生が足したマークも数に入れる
+    const before = Object.keys((S.exams[ex.id] || ex).marks || {}).length;
     if(replace && before){
       replace = await confirmBox('前のマークが消えます',
-        `「${esc(ex.name)}」には、すでに <b>${before}人分</b>のマークがあります。<br>「全部入れ替え」にすると、前のマークは全部消えて、今回のファイルの <b>${n}人分</b>だけになります。<br><br>別の日に受けた学生を足すときは、「追加・更新」を選んでください。`,
+        `「${esc(ex.name)}」には、すでに <b>${before}人分</b>のマークがあります（ほかの先生が読み込んだ分も入っています）。<br>「全部入れ替え」にすると、前のマークは全部消えて、今回のファイルの <b>${n}人分</b>だけになります。<br><br>別の日に受けた学生を足すときは、「追加・更新」を選んでください。`,
         '消して入れ替える', '追加・更新で読み込む');
       if(!replace) $('markMode').value = 'merge';
     }
-    if(replace) ex.marks = marks; else Object.assign(ex.marks, marks);
-    await saveExam(ex); renderMarks();
+    const ex2 = S.exams[ex.id] || ex;
+    if(replace) ex2.marks = Object.assign({}, marks); else ex2.marks = Object.assign(ex2.marks || {}, marks);
+    renderMarks();
+    if(!await mergeMarks(ex2, marks, replace)) return;
     let text = `${n}人分のマークを「${ex.name}」に読み込みました。`; let type = 'ok';
     if(width > ex.questions.length){ text += `\n※ マークの列（${width}列）が設問数（${ex.questions.length}問）より多いです。多い分は読みませんでした。`; type = 'warn'; }
     if(width < ex.questions.length){ text += `\n※ マークの列（${width}列）が設問数（${ex.questions.length}問）より少ないです。`; type = 'warn'; }
@@ -1203,7 +1225,7 @@ $('mFile').onchange = async e => {
     showMsg($('mMsg'), type, text);
   }catch(err){ showMsg($('mMsg'), 'err', 'ファイルを読めませんでした：' + err.message); }
 };
-armDanger($('mClear'), async () => { const ex = markExam(); if(!ex) return; ex.marks = {}; await saveExam(ex); renderMarks(); showMsg($('mMsg'),'ok','マークを削除しました。'); });
+armDanger($('mClear'), async () => { const ex = markExam(); if(!ex) return; ex.marks = {}; renderMarks(); if(await mergeMarks(ex, {}, true)) showMsg($('mMsg'),'ok','マークを削除しました。'); });
 function renderMarks(){
   const ex = markExam();
   fillClassSelect($('markTplClass'), ex ? `${tOf(ex)}期の全クラス` : '全クラス', tOf(ex));
@@ -1372,6 +1394,7 @@ function renderAll(){
 }
 /* ----- 次にやること ----- */
 function showTab(name){
+  if(Date.now() - lastSync > 20000) syncNow();
   document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + name);
   renderAll(); window.scrollTo({top:0, behavior:'smooth'});
@@ -2129,16 +2152,19 @@ async function omrSave(){
   const n = Object.keys(marks).length;
   if(!n){ showMsg($('omrMsg'), 'err', '保存できるシートがありません。'); return; }
   let replace = $('markMode').value === 'replace';
-  const before = Object.keys(ex.marks || {}).length;
+  if(replace) await syncNow();
+  const ex2 = S.exams[ex.id] || ex;
+  const before = Object.keys(ex2.marks || {}).length;
   if(replace && before){
     replace = await confirmBox('前のマークが消えます',
-      `「${esc(ex.name)}」には、すでに <b>${before}人分</b>のマークがあります。<br>「全部入れ替え」にすると、前のマークは全部消えて、今回の <b>${n}人分</b>だけになります。<br><br>別の日に受けた学生を足すときは、「追加・更新」を選んでください。`,
+      `「${esc(ex.name)}」には、すでに <b>${before}人分</b>のマークがあります（ほかの先生が読み込んだ分も入っています）。<br>「全部入れ替え」にすると、前のマークは全部消えて、今回の <b>${n}人分</b>だけになります。<br><br>別の日に受けた学生を足すときは、「追加・更新」を選んでください。`,
       '消して入れ替える', '追加・更新で保存する');
     if(!replace) $('markMode').value = 'merge';
   }
-  if(replace) ex.marks = marks; else ex.marks = Object.assign(ex.marks || {}, marks);
-  await saveExam(ex);
-  renderAll();
+  $('omrSave').disabled = true;
+  const ok = await mergeMarks(ex2, marks, replace);
+  $('omrSave').disabled = false;
+  if(!ok){ showMsg($('omrMsg'), 'err', '保存できませんでした。読み取った結果はそのまま残っているので、もう一度「確定して保存」を押してください。'); return; }
   $('omrResult').hidden = true; OMR.sheets = []; OMR.items = [];
   showMsg($('omrMsg'), 'ok', `${n}人分のマークを「${ex.name}」に保存しました。「⑤ 結果を見る」で結果を見られます。`);
 }
